@@ -1,0 +1,25 @@
+# Default values for mqtt-mirror.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: antegulin/mqtt-mirror
+  tag: stable
+  pullPolicy: IfNotPresent
+
+
+mqtt:
+  source:
+    host:
+    port:
+
+nameOverride: ""
+fullnameOverride: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
