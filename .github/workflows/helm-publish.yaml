@@ -11,8 +11,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Checkout helm repository repo
         uses: actions/checkout@v2
-        token: ${{PAT}}
-        repository: 'https://github.com/4nte/helm-charts'
+        with:
+          token: ${{PAT}}
+          repository: 'https://github.com/4nte/helm-charts'
       - name:
         uses: stefanprodan/kube-tools@v1
         with:
