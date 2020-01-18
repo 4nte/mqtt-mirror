@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  mirror:
+    image: antegulin/mqtt-mirror:latest
+    network_mode: host
+    environment:
+      SOURCE: tcp://source:1883
+      TARGET: tcp://target:1883
+      TOPIC_FILTER: locator
