@@ -12,11 +12,14 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           repository: '4nte/helm-charts'
+          path: code-repo
       - name:
         uses: stefanprodan/kube-tools@v1
         with:
+          path: helm-repo
           helm: 2.16.1
           command: |
             pwd
             ls
+            ls ../
 
