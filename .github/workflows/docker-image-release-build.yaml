@@ -9,9 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: mr-smithers-excellent/docker-build-push@v2
+        env:
+          - version: {{$GITHUB_REF##*/}
         with:
           image: antegulin/mqtt-mirror
-          tag: ${{github.ref##*/}}
+          tag: ${{ env.version }}
           registry: docker.io
           dockerfile: build/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
