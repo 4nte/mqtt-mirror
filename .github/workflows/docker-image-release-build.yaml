@@ -12,7 +12,7 @@ jobs:
         with:
           image: antegulin/mqtt-mirror
           tag: ${ GIT_BRANCH/#"release/" }
-          registry: dockerhub.com
+          registry: docker.io
           dockerfile: build/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
