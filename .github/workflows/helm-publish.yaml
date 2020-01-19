@@ -17,6 +17,6 @@ jobs:
         with:
           helm: 2.16.1
           command: |
-            echo pwd
-            echo ls
+            pwd
+            ls
 
