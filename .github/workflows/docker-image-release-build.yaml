@@ -3,13 +3,14 @@ on:
   push:
     branches:
       - 'release/**'
-env:
-  version: ${GIT_BRANCH/#"release/"}
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: mr-smithers-excellent/docker-build-push@v2
+        env:
+          version: ${GIT_BRANCH/#"release/"}
         with:
           image: antegulin/mqtt-mirror
           tag: ${{ version }}
