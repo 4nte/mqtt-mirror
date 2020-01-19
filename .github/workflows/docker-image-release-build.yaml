@@ -2,7 +2,7 @@ name: Build docker image (Release)
 on:
   push:
     branches:
-      - "release/*.*"
+      - "*release/*.*"
 env:
   version: ${GIT_BRANCH/#"release-"}
 jobs:
