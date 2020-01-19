@@ -19,7 +19,10 @@ jobs:
           path: helm-repo
           helm: 2.16.1
           command: |
-            pwd
+            cd /github/workspace/code-repo
+            echo "Code repo ---"
             ls
-            ls ../
+            cd /github/workspace/helm-repo
+            echo "Helm repo ---"
+            ls
 
