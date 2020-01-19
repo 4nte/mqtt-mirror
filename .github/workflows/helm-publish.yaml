@@ -6,17 +6,19 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Checkout helm repository repo
+      - name: Checkout code repo
+        with:
+          path: code-repo
+        uses: actions/checkout@v2
+      - name: Checkout helm package repository repo
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.PAT }}
           repository: '4nte/helm-charts'
           path: code-repo
-      - name:
+      - name:  Create helm package
         uses: stefanprodan/kube-tools@v1
         with:
-          path: helm-repo
           helm: 2.16.1
           command: |
             cd /github/workspace/code-repo
