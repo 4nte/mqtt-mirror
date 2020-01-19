@@ -29,4 +29,3 @@ jobs:
             cd /github/workspace/helm-repo
             echo "-- Helm repo ---"
             ls
-
