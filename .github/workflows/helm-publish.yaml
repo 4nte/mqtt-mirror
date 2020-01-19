@@ -28,4 +28,7 @@ jobs:
 
             cd /github/workspace/helm-repo
             echo "-- Helm repo ---"
+            git add .
+            git commit -m "release helm chart"
+            git push -u origin master
             ls
