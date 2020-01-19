@@ -11,7 +11,7 @@ jobs:
       - uses: mr-smithers-excellent/docker-build-push@v2
         with:
           image: antegulin/mqtt-mirror
-          tag: ${{ GIT_BRANCH/#"release/" }}
+          tag: ${ GIT_BRANCH/#"release/" }
           registry: dockerhub.com
           dockerfile: build/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
