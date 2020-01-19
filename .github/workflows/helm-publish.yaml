@@ -29,7 +29,9 @@ jobs:
 
             cd /github/workspace/helm-repo
             echo "-- Helm repo ---"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
             git add .
-            git commit -m "release helm chart"
+            git commit -m "release helm chart" -a
             git push -u origin master
             ls
