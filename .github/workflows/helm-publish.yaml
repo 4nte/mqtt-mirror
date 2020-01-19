@@ -24,8 +24,9 @@ jobs:
             cd /github/workspace/code-repo
             echo "-- Code repo ---"
             helm init --client-only
-            helm package chart/mqtt-mirror --destination /github/workspace/helm-repo
-            helm repo index /github/workspace/helm-repo --url https://rvgud.github.io/kube-curator/
+            mkdir -p /github/workspace/helm-repo/charts/mqt-mirror
+            helm package chart/mqtt-mirror --destination /github/workspace/helm-repo/charts/mqtt-mirror
+            helm repo index /github/workspace/helm-repo --url https://4nte.github.io/helm-charts/
 
             cd /github/workspace/helm-repo
             echo "-- Helm repo ---"
