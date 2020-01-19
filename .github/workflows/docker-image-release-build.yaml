@@ -11,9 +11,10 @@ jobs:
       - uses: mr-smithers-excellent/docker-build-push@v2
         env:
           version: ${GITHUB_REF##*/}
+          rawversion: ${GITHUB_REF}
         with:
           image: antegulin/mqtt-mirror
-          tag: ${{ env.version }}
+          tag: ${{ env.rawversion }}
           registry: docker.io
           dockerfile: build/Dockerfile
           username: ${{ secrets.DOCKER_USERNAME }}
