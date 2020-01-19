@@ -15,7 +15,7 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           repository: '4nte/helm-charts'
-          path: code-repo
+          path: helm-repo
       - name:  Create helm package
         uses: stefanprodan/kube-tools@v1
         with:
