@@ -13,6 +13,4 @@ ENV SOURCE ""
 ENV TARGET ""
 ENV TOPIC_FILTER "#"
 
-
-CMD ./mqtt-mirror $SOURCE $TARGET --verbose --topic_filter=$TOPIC_FILTER
-#CMD ["./mqtt-mirror","$SOURCE", "$TARGET","--source-username", "$SOURCE_USERNAME","--source-password", "$SOURCE_PASSWORD","--target-username", "$TARGET_USERNAME","--target-password", "$TARGET_PASSWORD","--verbose"]
+CMD ./mqtt-mirror $SOURCE $TARGET --verbose --topic_filter $TOPIC_FILTER
