@@ -1,3 +1,8 @@
+{{- define "helm-toolkit.utils.joinListWithComma" -}}
+{{- $local := dict "first" true -}}
+{{- range $k, $v := . -}}{{- if not $local.first -}},{{- end -}}{{- $v -}}{{- $_ := set $local "first" false -}}{{- end -}}
+{{- end -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,18 +28,17 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          env:
+            - name: SOURCE
+              value: "{{ required ".Values.mqtt.source must be specified!" .Values.mqtt.source }}"
+            - name: TARGET
+              value: "{{ required ".Values.mqtt.target must be specified!" .Values.mqtt.target }}"
+            - name: TOPIC_FILTER
+              value: "{{ include "helm-toolkit.utils.joinListWithComma" .Values.mqtt.topic_filter }}"
+            {{ if .Values.verbose }}
+            - name: VERBOSE
+              value: "{{ .Values.verbose }}"
+            {{end}}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

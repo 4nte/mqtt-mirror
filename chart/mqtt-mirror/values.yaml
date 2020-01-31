@@ -6,14 +6,15 @@ replicaCount: 1
 
 image:
   repository: antegulin/mqtt-mirror
-  tag: stable
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 
+verbose: false
 
 mqtt:
-  source:
-    host:
-    port:
+  source: ""
+  target: ""
+  topic_filter: [] # all topics
 
 nameOverride: ""
 fullnameOverride: ""
