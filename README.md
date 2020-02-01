@@ -7,8 +7,8 @@
 
 
 <p align="center">
-  <img alt="GoReleaser Logo" src="https://i.imgur.com/EOGwXRf.png" height="150" />
-  <h3 align="center">GoReleaser</h3>
+  <img alt="mqtt-mirror diagram" src="https://i.imgur.com/EOGwXRf.png" height="150" />
+  <h3 align="center">mqtt-mirror</h3>
   <p align="center">Fork MQTT traffic with no fuss, deploy in matter of seconds.</p>
 </p>
 
