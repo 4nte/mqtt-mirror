@@ -9,7 +9,7 @@
 <p align="center">
   <img alt="mqtt-mirror diagram" src="https://i.imgur.com/EOGwXRf.png" height="150" />
   <h3 align="center">mqtt-mirror</h3>
-  <p align="center">Fork MQTT traffic with no fuss, deploy in matter of seconds. Kubernetes ready!</p>
+  <p align="center">Fork MQTT traffic with no fuss, deploy in seconds. Kubernetes ready!</p>
 </p>
 
 ---
@@ -21,11 +21,10 @@ Replicated messages preserve the original _QoS_ and _Retain_ message options.
 All topics are mirrored by default, you can cherry pick topics to be mirrored by specifying topic filters. Standard MQTT wildcards `+` and `#` are available, [see wildcard spec](https://mosquitto.org/man/mqtt-7.html).
 
 #### Should I use this in production?  
-Before 1.0 is released, use the following rule of thumb for production use:
-> Are you mirroring MQTT traffic from a production broker to a non-production broker?  
-If yes, mqtt-mirror is safe by design since it behaves as a read-only client to the source broker. In case of failure, production broker will not be affected.
+mqtt-mirror is not tested well enough to be relied upon for critical purposes. Until a stable 1.0 release, use with caution.
 
-Take in consideration that outbound traffic will increase by the amount of inbound traffic. It might become an issue for really high loads. Use topic filters to prevent mirroring of unecessary messages.
+Take in consideration that outbound traffic will increase by the amount of inbound traffic.  
+Use topic filters to prevent mirroring of unecessary messages.
 
 mqtt-mirror is used in production at ![spotsie.io](https://spotsie.io/)! :sparkles:
 
