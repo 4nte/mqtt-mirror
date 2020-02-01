@@ -14,3 +14,29 @@
 
 
 
+---
+
+Mqtt-mirror subscribes to a _source broker_ and publishes replicated messages to a _target broker_.  
+Replicated messages preserve the _QoS_ and _Retain_ values of the original message.
+
+## Get Started
+
+
+
+**Homebrew**
+```
+brew tap 4nte/homebrew-tap
+brew install mqtt-mirror
+```
+
+**Shell script**
+```
+curl -sfL https://raw.githubusercontent.com/4nte/mqtt-mirror/master/install.sh | sh
+```
+
+**Compile from source**
+```
+git clone https://github.com/4nte/mqtt-mirror
+cd mqtt-mirror
+go build
+```
