@@ -54,7 +54,7 @@ dockers:
     # If set to auto, the release will not be pushed to the docker repository
     # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
     # Defaults to false.
-    skip_push: false
+    skip_push: true
 
     # Path to the Dockerfile (from the project root).
     dockerfile: Dockerfile
@@ -66,3 +66,24 @@ dockers:
       - "--label=org.opencontainers.image.name={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+
+brews:
+  -
+    # Github repository to push the tap to.
+    github:
+      owner: 4nte
+      name: homebrew-tap
+
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: goreleaserbot
+      email: gnante0@gmail.com
+
+    # Your app's homepage.
+    # Default is empty.
+    homepage: "https://github.com/4nte/mqtt-mirror"
+
+    # Your app's description.
+    # Default is empty.
+    description: "Replicate MQTT traffic from one broker to another."
