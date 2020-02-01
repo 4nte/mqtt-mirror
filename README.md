@@ -12,16 +12,23 @@
   <p align="center">Fork MQTT traffic with no fuss, deploy in matter of seconds.</p>
 </p>
 
-
-
 ---
 
 Mqtt-mirror subscribes to a _source broker_ and publishes replicated messages to a _target broker_.  
-Replicated messages preserve the _QoS_ and _Retain_ values of the original message.
+Replicated messages preserve the original _QoS_ and _Retain_ options.
 
-## Get Started
+## Get started
+
+Mqtt-mirror is available as a **standalone binary**, **docker image** or deployed to kubernetes via **helm chart**.
 
 
+### Install
+
+**Docker**
+```
+brew tap 4nte/homebrew-tap
+brew install mqtt-mirror
+```
 
 **Homebrew**
 ```
