@@ -5,6 +5,8 @@ import (
 	"github.com/4nte/go-mirror/pkg/mqtt"
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.MessageHandler {
@@ -12,7 +14,9 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.M
 		return func(client mqtt2.Client, message mqtt2.Message) {
 			topic := message.Topic()
 			payload := message.Payload()
-			fmt.Printf("topic: %s, %d bytes\n", topic, len(payload))
+			qos := message.Qos()
+			retained := message.Retained()
+			fmt.Printf("mirroring message (%dbytes): topic=%s, QoS=%b, retained=%s\n", len(payload), topic, qos, strconv.FormatBool(retained))
 			targetClient.Publish(message.Topic(), message.Qos(), message.Retained(), message.Payload())
 		}
 	}
@@ -62,6 +66,7 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 	if len(topics) == 0 {
 		// Subscribe to all
 		sourceClient.Subscribe("#", qos, messageHandler)
+		fmt.Println("mirroring all topics")
 	} else {
 		topicFilterMap := make(map[string]byte)
 		for _, topicFilter := range topics {
@@ -70,6 +75,7 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 
 		// Subscribe to specified filters
 		sourceClient.SubscribeMultiple(topicFilterMap, messageHandler)
+		fmt.Printf("mirroring topics: %s", strings.Join(topics, ", "))
 	}
 
 	<-done
