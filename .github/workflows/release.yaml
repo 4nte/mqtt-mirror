@@ -54,7 +54,14 @@ jobs:
           command: |
             export SEMVER=${GITHUB_REF#refs/tags/v}
             echo "semver $SEMVER"
+            pwd
             ls
+            echo "github_workspace"
+            ls $GITHUB_WORKSPACE
+            echo "github_workspace_helm_charts"
+            ls $GITHUB_WORKSPACE/helm-charts
+            echo "github_workspace_mqtt_mirror"
+            ls $GITHUB_WORKSPACE/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
             mkdir -p $GITHUB_WORKSPACE/helm-charts/charts/mqtt-mirror
@@ -68,3 +75,9 @@ jobs:
             git add .
             git commit -m "release helm chart" -a
             git push -u origin master
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.PAT }}
+          repository: ${{ github.workspace/helm-charts }}
