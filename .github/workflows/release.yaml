@@ -56,15 +56,15 @@ jobs:
           command: |
             export SEMVER=${GIT_REF/#"v"}
             echo "semver $SEMVER"
-            cd /github/workspace/
+            cd $GITHUB_WORKSPACE
             ls
-            cd /github/workspace/mqtt-mirror/mqtt-mirror
+            cd $GITHUB_WORKSPACE/mqtt-mirror/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
-            mkdir -p /github/workspace/helm-charts/charts/mqtt-mirror
-            helm package chart/mqtt-mirror --destination /github/workspace/helm-charts/charts/mqtt-mirror --version $SEMVER
-            helm repo index /github/workspace/helm-charts --url https://4nte.github.io/helm-charts/
-            cd /github/workspace/helm-charts
+            mkdir -p $GITHUB_WORKSPACE/helm-charts/charts/mqtt-mirror
+            helm package chart/mqtt-mirror --destination $GITHUB_WORKSPACE/helm-charts/charts/mqtt-mirror --version $SEMVER
+            helm repo index $GITHUB_WORKSPACE/helm-charts --url https://4nte.github.io/helm-charts/
+            cd $GITHUB_WORKSPACE/helm-charts
             echo "-- Helm repo ---"
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
