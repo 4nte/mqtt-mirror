@@ -17,18 +17,19 @@ jobs:
           go-version: 1.13
         id: go
 
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          path: mqtt-mirror
+          fetch-depth: 0
+
       - name: Checkout helm package repository repo
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.PAT }}
-          repository: '4nte/helm-charts'
-          path: 'helm-charts'
+          repository: 4nte/helm-charts
+          path: helm-charts
           ref: master
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: Docker Login
         if: success() && startsWith(github.ref, 'refs/tags/')
@@ -53,14 +54,18 @@ jobs:
           helm: 2.16.1
           command: |
             export SEMVER=${GITHUB_REF#refs/tags/v}
-            echo "semver $SEMVER"
+
+            echo "-- here --"
             pwd
             ls
-            echo "github_workspace"
+
+            echo "-- GITHUB_WORKSPACE --"
             ls $GITHUB_WORKSPACE
-            echo "github_workspace_helm_charts"
+
+            echo "-- GITHUB_WORKSPACE/helm-charts--"
             ls $GITHUB_WORKSPACE/helm-charts
-            echo "github_workspace_mqtt_mirror"
+
+            echo "-- GITHUB_WORKSPACE/mqtt-mirror--"
             ls $GITHUB_WORKSPACE/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
