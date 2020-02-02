@@ -17,14 +17,21 @@ jobs:
           go-version: 1.13
         id: go
 
-      - name: Check out code into the Go module directory
+      - name: Checkout helm package repository repo
         uses: actions/checkout@v2
         with:
-          path: mqtt-mirror
+          token: ${{ secrets.PAT }}
+          repository: '4nte/helm-charts'
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
       - name: Unshallow
         run: |
-          cd $GITHUB_WORKSPACE/mqtt-mirror
+          pwd
+          ls
+          cd $GITHUB_WORKSPACE
+          ls
           git fetch --depth=10000
 
       - name: Docker Login
@@ -39,15 +46,11 @@ jobs:
         uses: goreleaser/goreleaser-action@master
         with:
           args: release
+          workdir: ${{ GITHUB_WORKSPACE }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
-      - name: Checkout helm package repository repo
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.PAT }}
-          repository: '4nte/helm-charts'
-          path: helm-repo
+
 
       - name:  Create helm package
         uses: stefanprodan/kube-tools@v1
@@ -59,10 +62,10 @@ jobs:
             cd /github/workspace/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
-            mkdir -p /github/workspace/helm-repo/charts/mqtt-mirror
-            helm package chart/mqtt-mirror --destination /github/workspace/helm-repo/charts/mqtt-mirror --version $SEMVER
-            helm repo index /github/workspace/helm-repo --url https://4nte.github.io/helm-charts/
-            cd /github/workspace/helm-repo
+            mkdir -p /github/workspace/helm-charts/charts/mqtt-mirror
+            helm package chart/mqtt-mirror --destination /github/workspace/helm-charts/charts/mqtt-mirror --version $SEMVER
+            helm repo index /github/workspace/helm-charts --url https://4nte.github.io/helm-charts/
+            cd /github/workspace/helm-charts
             echo "-- Helm repo ---"
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
