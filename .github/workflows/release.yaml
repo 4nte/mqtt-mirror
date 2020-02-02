@@ -32,6 +32,8 @@ jobs:
           ls
           cd $GITHUB_WORKSPACE
           ls
+          cd mqtt-mirror
+          ls
           git fetch --depth=10000
 
       - name: Docker Login
@@ -46,7 +48,6 @@ jobs:
         uses: goreleaser/goreleaser-action@master
         with:
           args: release
-          workdir: ${{ GITHUB_WORKSPACE }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
