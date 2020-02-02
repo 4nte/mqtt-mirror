@@ -52,7 +52,7 @@ jobs:
           command: |
             export SEMVER=${GIT_REF/#"v"}
             echo "semver $SEMVER"
-            cd /github/workspace/code-repo
+            cd /github/workspace/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
             mkdir -p /github/workspace/helm-repo/charts/mqtt-mirror
