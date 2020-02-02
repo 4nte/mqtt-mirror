@@ -57,6 +57,7 @@ jobs:
         with:
           helm: 2.16.1
           command: |
+            echo $GITHUB_REF
             export SEMVER=${GIT_REF/#"v"}
             echo "semver $SEMVER"
             ls
