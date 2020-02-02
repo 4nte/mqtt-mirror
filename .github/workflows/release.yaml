@@ -57,8 +57,7 @@ jobs:
         with:
           helm: 2.16.1
           command: |
-            echo $GITHUB_REF
-            export SEMVER=${GIT_REF/#"v"}
+            export SEMVER=${GITHUB_REF#refs/tags/v}
             echo "semver $SEMVER"
             ls
             echo "-- Code repo ---"
