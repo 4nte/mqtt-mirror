@@ -22,9 +22,12 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           repository: '4nte/helm-charts'
+          path: 'helm-charts'
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Unshallow
         run: |
@@ -56,9 +59,7 @@ jobs:
           command: |
             export SEMVER=${GIT_REF/#"v"}
             echo "semver $SEMVER"
-            cd $GITHUB_WORKSPACE
             ls
-            cd $GITHUB_WORKSPACE/mqtt-mirror/mqtt-mirror
             echo "-- Code repo ---"
             helm init --client-only
             mkdir -p $GITHUB_WORKSPACE/helm-charts/charts/mqtt-mirror
