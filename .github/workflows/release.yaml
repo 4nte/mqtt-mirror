@@ -19,6 +19,7 @@ jobs:
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+        path: code-repo
 
       - name: Unshallow
         run: git fetch --depth=10000
