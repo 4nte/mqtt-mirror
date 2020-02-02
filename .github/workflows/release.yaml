@@ -67,6 +67,7 @@ jobs:
             helm repo index $GITHUB_WORKSPACE/helm-charts --url https://4nte.github.io/helm-charts/
             cd $GITHUB_WORKSPACE/helm-charts
             echo "-- Helm repo ---"
+            ls
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git add .
