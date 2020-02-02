@@ -87,6 +87,3 @@ brews:
     # Your app's description.
     # Default is empty.
     description: "Replicate MQTT traffic from one broker to another."
-
-signs:
-  - artifacts: checksum
