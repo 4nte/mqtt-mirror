@@ -9,8 +9,8 @@
 <p align="center">
   <img alt="mqtt-mirror diagram" src="https://i.imgur.com/EOGwXRf.png" height="150" />
   <h3 align="center">mqtt-mirror</h3>
-  <p align="center">Fork MQTT traffic with no fuss, deploy in seconds. Kubernetes ready!</p>
-</p>
+<p align="center">Fork MQTT traffic with no fuss, deploy in seconds. Kubernetes ready.</p>
+
 
 ---
 
@@ -19,6 +19,8 @@ Replicated messages preserve the original _QoS_ and _Retain_ message options.
 
 
 All topics are mirrored by default, you can cherry pick topics to be mirrored by specifying topic filters. Standard MQTT wildcards `+` and `#` are available, [see wildcard spec](https://mosquitto.org/man/mqtt-7.html).
+
+![Example usage](./img/demo.svg)
 
 #### Should I use this in production?  
 mqtt-mirror is not tested well enough to be relied upon for critical purposes. Until a stable 1.0 release, use with caution.
