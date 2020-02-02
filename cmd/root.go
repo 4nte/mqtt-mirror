@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/4nte/go-mirror/internal"
+	"github.com/4nte/mqtt-mirror/internal"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -59,7 +59,6 @@ var rootCmd = &cobra.Command{
 			return errors.New("mqtt target missing")
 		}
 
-		fmt.Println("sooource", source)
 		if err := isValidUrl(source); err != nil {
 			return errors.Wrap(err, "failed to parse source URI")
 		}
@@ -83,7 +82,7 @@ var rootCmd = &cobra.Command{
 			target = viper.GetString("target")
 		}
 
-		topicFilter := viper.GetStringSlice("topic")
+		topicFilter := viper.GetStringSlice("topic_filter")
 		isVerbose := viper.GetBool("verbose")
 
 		sourceURL, err := url.Parse(source)

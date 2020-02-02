@@ -2,9 +2,11 @@ package internal
 
 import (
 	"fmt"
-	"github.com/4nte/go-mirror/pkg/mqtt"
+	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.MessageHandler {
@@ -12,7 +14,9 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.M
 		return func(client mqtt2.Client, message mqtt2.Message) {
 			topic := message.Topic()
 			payload := message.Payload()
-			fmt.Printf("topic: %s, %d bytes\n", topic, len(payload))
+			qos := message.Qos()
+			retained := message.Retained()
+			fmt.Printf("message replicated (%d bytes): topic=%s, QoS=%b, retained=%s\n", len(payload), topic, qos, strconv.FormatBool(retained))
 			targetClient.Publish(message.Topic(), message.Qos(), message.Retained(), message.Payload())
 		}
 	}
@@ -46,7 +50,7 @@ func getBrokerHostString(broker url.URL) string {
 func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 	done := make(chan struct{})
 
-	fmt.Printf("mirroring traffic (%s) --> (%s)\n", source.Hostname(), target.Hostname())
+	fmt.Printf("mirroring traffic (%s) --> (%s)\n", source.Host, target.Host)
 
 	sourceHost := getBrokerHostString(source)
 	sourcePassword, _ := source.User.Password()
@@ -62,6 +66,7 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 	if len(topics) == 0 {
 		// Subscribe to all
 		sourceClient.Subscribe("#", qos, messageHandler)
+		fmt.Println("mirroring *all* topics")
 	} else {
 		topicFilterMap := make(map[string]byte)
 		for _, topicFilter := range topics {
@@ -70,6 +75,7 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 
 		// Subscribe to specified filters
 		sourceClient.SubscribeMultiple(topicFilterMap, messageHandler)
+		fmt.Printf("mirroring topics: %s\n", strings.Join(topics, ", "))
 	}
 
 	<-done

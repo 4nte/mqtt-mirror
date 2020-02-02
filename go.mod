@@ -1,4 +1,4 @@
-module github.com/4nte/go-mirror
+module github.com/4nte/mqtt-mirror
 
 go 1.12
 
