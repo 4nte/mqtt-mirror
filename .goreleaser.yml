@@ -48,7 +48,7 @@ dockers:
     image_templates:
       - "antegulin/mqtt-mirror:latest"
       - "antegulin/mqtt-mirror:{{ .Tag }}"
-      - "myuser/mqtt-mirror:v{{ .Major }}"
+      - "antegulin/mqtt-mirror:v{{ .Major }}"
 
     # Skips the docker push. Could be useful if you also do draft releases.
     # If set to auto, the release will not be pushed to the docker repository
