@@ -86,5 +86,5 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT }}
-          repository: helm-charts
+          repository: 4nte/helm-charts
           directory: ${{github.workspace}}/helm-charts
