@@ -43,6 +43,7 @@ jobs:
         uses: goreleaser/goreleaser-action@master
         with:
           args: release
+          workdir: ${{github.workspace}}/mqtt-mirror
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
