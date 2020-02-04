@@ -28,13 +28,13 @@ mqtt-mirror is not tested well enough to be relied upon for critical purposes. U
 Take in consideration that outbound traffic will increase by the amount of inbound traffic.  
 Use topic filters to prevent mirroring of unecessary messages.
 
-mqtt-mirror is used in production at ![spotsie.io](https://spotsie.io/)! :sparkles:
+mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkles:
 
 ### 1.0 (GA) roadmap 
--[] Helm chart liveness probe
--[] Integration test
--[] Stress test
--[] Expose Prometheus metrics
+- [ ] Helm chart liveness probe
+- [ ] Integration test
+- [ ] Stress test
+- [ ] Expose Prometheus metrics
 
 ## Get started
 
@@ -54,7 +54,7 @@ tcp://target.xyz:1883 \
 **Helm chart** :package:
 ```
 helm repo add 4nte https://raw.githubusercontent.com/4nte/
-helm install mqtt-mirror 4nte/mqtt-mirror 
+helm install mqtt-mirror 4nte/mqtt-mirror \
 --set mqtt.source=$SOURCE_BROKER \
 --set mqtt.target=$TARGET_BROKER \
 --set mqtt.topic_filter=foo,bar,device/+/ping \
@@ -89,3 +89,8 @@ go build -o mqtt-mirror
 ./mqtt-mirror --version
 ```
 
+## Sponsors
+![spotsie](https://spotsie.io/images/spotsie.svg)
+
+## Development
+If you like this project, please consider helping out. All contributions are welcome.
