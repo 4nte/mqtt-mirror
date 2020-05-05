@@ -53,13 +53,25 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 	fmt.Printf("mirroring traffic (%s) --> (%s)\n", source.Host, target.Host)
 
 	sourceHost := getBrokerHostString(source)
-	sourcePassword, _ := source.User.Password()
-
-	sourceClient := mqtt.NewClient(sourceHost, source.User.String(), sourcePassword, true)
+	var sourceUsername = ""
+	var sourcePassword = ""
+	user := strings.Split(source.User.String(), ":")
+	if len(user) > 1{
+		sourceUsername = user[0]
+		sourcePassword = user[1]
+	}
+	sourceClient := mqtt.NewClient(sourceHost, sourceUsername, sourcePassword, true)
 
 	targetHost := getBrokerHostString(target)
-	targetPassword, _ := target.User.Password()
-	targetClient := mqtt.NewClient(targetHost, target.User.String(), targetPassword, false)
+	var targetUsername = ""
+	var targetPassword = ""
+	user = strings.Split(target.User.String(), ":")
+	if len(user) > 1{
+		targetUsername = user[0]
+		targetPassword = user[1]
+	}
+
+	targetClient := mqtt.NewClient(targetHost, targetUsername, targetPassword, false)
 
 	qos := byte(0)
 	messageHandler := createSourceMessageHandler(targetClient, verbose)
