@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/docker/go-connections v0.4.0
 	github.com/eclipse/paho.mqtt.golang v1.2.0
-	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
