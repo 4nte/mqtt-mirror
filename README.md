@@ -32,7 +32,7 @@ mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkle
 
 ### 1.0 (GA) roadmap 
 - [ ] Helm chart liveness probe
-- [ ] Integration test
+- [x] Integration test
 - [ ] Stress test
 - [ ] Expose Prometheus metrics
 
