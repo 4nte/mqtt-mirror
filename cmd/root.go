@@ -94,7 +94,10 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		_ = internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0)
+		_, err = internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0)
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 
