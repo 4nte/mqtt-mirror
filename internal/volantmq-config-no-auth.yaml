@@ -1,0 +1,44 @@
+system:
+  log:
+    console:
+      level: debug # available levels: debug, info, warn, error, dpanic, panic, fatal
+  acceptor:
+    maxIncoming: 1000
+    preSpawn: 100
+  plugins:
+    enabled:
+      - health
+    config:
+      health:
+        - backend: health
+          config:
+            livenessEndpoint: live
+            readinessEndpoint: ready
+      auth:
+        - name: internal  # authenticator name, used by listeners
+          backend: simpleAuth # authenticator type
+          config:
+            users: # both can be used simultaneously
+              "": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # Effectively, anonymous login
+auth:
+  order:
+    - internal
+mqtt:
+  version:
+    - v3.1.1
+  keepAlive:
+    period: 60
+    force: false
+  options:
+    connectTimeout: 2
+    offlineQoS0: true
+    sessionDups: false
+    retainAvail: true
+    subsOverlap: false
+    subsId: false
+    subsShared: false
+    subsWildcard: true
+    receiveMax: 65535
+    maxPacketSize: 268435455
+    maxTopicAlias: 65535
+    maxQoS: 2
