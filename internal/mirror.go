@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.MessageHandler {
@@ -47,20 +48,31 @@ func getBrokerHostString(broker url.URL) string {
 	return host
 }
 
-func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
+func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeout time.Duration) func() {
 	done := make(chan struct{})
+	if timeout > 0 {
+		go func() {
+			<-time.After(timeout)
+			done <- struct{}{}
+		}()
+	}
 
 	fmt.Printf("mirroring traffic (%s) --> (%s)\n", source.Host, target.Host)
 
 	sourceHost := getBrokerHostString(source)
 	sourcePassword, _ := source.User.Password()
 
-	sourceClient := mqtt.NewClient(sourceHost, source.User.String(), sourcePassword, true)
+	sourceClient, err := mqtt.NewClient(sourceHost, source.User.Username(), sourcePassword, true)
+	if err != nil {
+		panic(err)
+	}
 
 	targetHost := getBrokerHostString(target)
 	targetPassword, _ := target.User.Password()
-	targetClient := mqtt.NewClient(targetHost, target.User.String(), targetPassword, false)
-
+	targetClient, err := mqtt.NewClient(targetHost, target.User.Username(), targetPassword, false)
+	if err != nil {
+		panic(err)
+	}
 	qos := byte(0)
 	messageHandler := createSourceMessageHandler(targetClient, verbose)
 	if len(topics) == 0 {
@@ -78,5 +90,15 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool) {
 		fmt.Printf("mirroring topics: %s\n", strings.Join(topics, ", "))
 	}
 
-	<-done
+	terminate := func() {
+		sourceClient.Disconnect(0)
+		targetClient.Disconnect(0)
+	}
+	go func() {
+		<-done
+		terminate()
+	}()
+
+	return terminate
+
 }
