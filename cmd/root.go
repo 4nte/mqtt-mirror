@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 var ( // Flags
@@ -69,6 +71,16 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		sigs := make(chan os.Signal, 1)
+		done := make(chan bool, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			sig := <-sigs
+			fmt.Println()
+			fmt.Println(sig)
+			done <- true
+		}()
+
 		// Use args or viper value
 		var source, target string
 		if len(args) == 2 {
@@ -94,10 +106,13 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		_, err = internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0)
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0)
 		if err != nil {
 			panic(err)
 		}
+
+		<-done
+		terminate()
 	},
 }
 
