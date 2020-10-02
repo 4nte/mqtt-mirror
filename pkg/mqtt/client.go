@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func NewClient(broker string, username string, password string, isSource bool) paho.Client {
+func NewClient(broker string, username string, password string, isSource bool) (paho.Client, error) {
 	var alias string
 	if isSource {
 		alias = "source"
@@ -22,7 +22,7 @@ func NewClient(broker string, username string, password string, isSource bool) p
 		// TODO: channel
 	})
 	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
-		fmt.Print(fmt.Errorf("connection lost with %s (%s)", broker, alias))
+		fmt.Print(fmt.Errorf("connection lost with %s (%s)\n", broker, alias))
 		// TODO: channel
 	})
 
@@ -33,8 +33,8 @@ func NewClient(broker string, username string, password string, isSource bool) p
 	ok := token.WaitTimeout(connTimeout)
 	if !ok {
 		err := fmt.Errorf("connection timeout exceeded (%s): %s (%s)", connTimeout.String(), broker, alias)
-		panic(err)
+		return nil, err
 	}
 
-	return client
+	return client, nil
 }
