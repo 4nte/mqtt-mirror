@@ -19,7 +19,7 @@ system:
           backend: simpleAuth # authenticator type
           config:
             users: # both can be used simultaneously
-              "": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # Effectively, anonymous login
+              "": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 auth:
   order:
     - internal

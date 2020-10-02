@@ -119,7 +119,7 @@ func NewMQTTContainer(requireAuth bool) (MqttBroker, error) {
 }
 
 func NewClient(broker string, username string, password string, clientID string) paho.Client {
-	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(15 * time.Second).SetUsername(username).SetPassword(password).SetClientID(clientID)
+	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(30 * time.Second).SetUsername(username).SetPassword(password).SetClientID(clientID)
 
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
 		fmt.Printf("connection established to %s (%s)\n", broker, clientID)
@@ -131,7 +131,7 @@ func NewClient(broker string, username string, password string, clientID string)
 	client := paho.NewClient(clientOpts)
 
 	token := client.Connect()
-	connTimeout := 20 * time.Second
+	connTimeout := 30 * time.Second
 	ok := token.WaitTimeout(connTimeout)
 	if !ok {
 		err := fmt.Errorf("connection timeout exceeded (%s): %s (%s)", connTimeout.String(), broker, clientID)
@@ -165,10 +165,9 @@ func TestMirror_withAuth(t *testing.T) {
 		panic(err)
 	}
 
-	terminateMirror := Mirror(*sourceURL, *destinationURL, []string{}, true, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0)
+	require.NoError(t, err)
 
-	// Wait for mirror func to startup
-	<-time.After(10 * time.Second)
 	mutex := sync.Mutex{}
 
 	defer sourceBroker.Terminate()
@@ -208,7 +207,8 @@ func TestMirror_withAuth(t *testing.T) {
 	<-time.After(1 * time.Second)
 	terminateMirror()
 
-	require.Equal(t, len(sourceBrokerMessages), len(destinationBrokerMessages), "Destination broker should have equal amount of messages as the Source broker")
+	require.Lenf(t, sourceBrokerMessages, 3, "Source broker should have 3 messages")
+	require.Lenf(t, destinationBrokerMessages, 3, "destination broker should have 3 messages")
 	for _, sourceMessage := range sourceBrokerMessages {
 		var isDuplicated bool
 		for _, msg := range destinationBrokerMessages {
@@ -221,82 +221,83 @@ func TestMirror_withAuth(t *testing.T) {
 	}
 }
 
-func TestMirror_noAuth(t *testing.T) {
-	sourceBroker, err := NewMQTTContainer(false)
-	if err != nil {
-		t.Fatalf("failed to start a source broker: %s", err)
-	}
-	destinationBroker, err := NewMQTTContainer(false)
-	if err != nil {
-		t.Fatalf("failed to start a source broker: %s", err)
-	}
-
-	// MQTT credentials for both brokers
-	username := ""
-	password := ""
-
-	// Start Mirror func
-	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, sourceBroker.HostIP, sourceBroker.HostPort))
-	if err != nil {
-		panic(err)
-	}
-	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
-	if err != nil {
-		panic(err)
-	}
-
-	terminateMirror := Mirror(*sourceURL, *destinationURL, []string{}, true, 0)
-
-	// Wait for mirror func to startup
-	<-time.After(10 * time.Second)
-	mutex := sync.Mutex{}
-
-	defer sourceBroker.Terminate()
-	defer destinationBroker.Terminate()
-
-	var sourceBrokerMessages []paho.Message
-	var destinationBrokerMessages []paho.Message
-
-	fmt.Println(sourceBroker.Uri())
-	// Create client and subscribe to all topics
-	sourceBrokerClient := NewClient(sourceBroker.Uri(), username, password, "source-client")
-	token := sourceBrokerClient.Subscribe("#", message.QosAtLeastOnce, func(client paho.Client, msg paho.Message) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		sourceBrokerMessages = append(sourceBrokerMessages, msg)
-	})
-	token.Wait()
-
-	// Create client and subscribe to all topics
-	destinationBrokerClient := NewClient(destinationBroker.Uri(), username, password, "destination-client")
-	token = destinationBrokerClient.Subscribe("#", message.QosAtLeastOnce, func(client paho.Client, msg paho.Message) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		destinationBrokerMessages = append(destinationBrokerMessages, msg)
-	})
-	token.Wait()
-
-	token = sourceBrokerClient.Publish("test/msg1", message.QosAtLeastOnce, false, []byte("foo"))
-	token.Wait()
-
-	token = sourceBrokerClient.Publish("test/msg2", message.QosAtLeastOnce, false, []byte("foo"))
-	token.Wait()
-
-	token = sourceBrokerClient.Publish("test/msg3", message.QosAtLeastOnce, false, []byte("foo"))
-	token.Wait()
-
-	<-time.After(1 * time.Second)
-	terminateMirror()
-
-	require.Equal(t, len(sourceBrokerMessages), len(destinationBrokerMessages), "Destination broker should have equal amount of messages as the Source broker")
-	for _, sourceMessage := range sourceBrokerMessages {
-		var isDuplicated bool
-		for _, msg := range destinationBrokerMessages {
-			if string(sourceMessage.Payload()) == string(msg.Payload()) {
-				isDuplicated = true
-				break
-			}
-		}
-		require.True(t, isDuplicated, "message not duplicated")
-	}
-}
+// TODO: enable after volantmq broker supports anonymous logins
+//func TestMirror_noAuth(t *testing.T) {
+//	sourceBroker, err := NewMQTTContainer(false)
+//	if err != nil {
+//		t.Fatalf("failed to start a source broker: %s", err)
+//	}
+//	destinationBroker, err := NewMQTTContainer(false)
+//	if err != nil {
+//		t.Fatalf("failed to start a source broker: %s", err)
+//	}
+//
+//
+//	// Start Mirror func
+//	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s",sourceBroker.HostIP, sourceBroker.HostPort))
+//	if err != nil {
+//		panic(err)
+//	}
+//	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s", destinationBroker.HostIP, destinationBroker.HostPort))
+//	if err != nil {
+//		panic(err)
+//	}
+//	fmt.Println(sourceBroker.HostPort, destinationBroker.HostPort)
+//	//<-time.After(30 * time.Second)
+//
+//	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0)
+//	require.NoError(t, err)
+//	// Wait for mirror func to startup
+//	<-time.After(10 * time.Second)
+//	mutex := sync.Mutex{}
+//
+//	defer sourceBroker.Terminate()
+//	defer destinationBroker.Terminate()
+//
+//	var sourceBrokerMessages []paho.Message
+//	var destinationBrokerMessages []paho.Message
+//
+//	fmt.Println(sourceBroker.Uri())
+//	// Create client and subscribe to all topics
+//	sourceBrokerClient := NewClient(sourceBroker.Uri(), "", "", "source-client")
+//	token := sourceBrokerClient.Subscribe("#", message.QosAtLeastOnce, func(client paho.Client, msg paho.Message) {
+//		mutex.Lock()
+//		defer mutex.Unlock()
+//		sourceBrokerMessages = append(sourceBrokerMessages, msg)
+//	})
+//	token.Wait()
+//
+//	// Create client and subscribe to all topics
+//	destinationBrokerClient := NewClient(destinationBroker.Uri(), "", "", "destination-client")
+//	token = destinationBrokerClient.Subscribe("#", message.QosAtLeastOnce, func(client paho.Client, msg paho.Message) {
+//		mutex.Lock()
+//		defer mutex.Unlock()
+//		destinationBrokerMessages = append(destinationBrokerMessages, msg)
+//	})
+//	token.Wait()
+//
+//	token = sourceBrokerClient.Publish("test/msg1", message.QosAtLeastOnce, false, []byte("foo"))
+//	token.Wait()
+//
+//	token = sourceBrokerClient.Publish("test/msg2", message.QosAtLeastOnce, false, []byte("bar"))
+//	token.Wait()
+//
+//	token = sourceBrokerClient.Publish("test/msg3", message.QosAtLeastOnce, false, []byte("baz"))
+//	token.Wait()
+//
+//	<-time.After(1 * time.Second)
+//	terminateMirror()
+//
+//	require.Lenf(t, sourceBrokerMessages, 3, "Source broker should have 3 messages")
+//	require.Lenf(t, destinationBrokerMessages, 3, "destination broker should have 3 messages")
+//	for _, sourceMessage := range sourceBrokerMessages {
+//		var isDuplicated bool
+//		for _, msg := range destinationBrokerMessages {
+//			if string(sourceMessage.Payload()) == string(msg.Payload()) {
+//				isDuplicated = true
+//				break
+//			}
+//		}
+//		require.True(t, isDuplicated, "message not duplicated")
+//	}
+//}
