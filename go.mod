@@ -1,6 +1,6 @@
 module github.com/4nte/mqtt-mirror
 
-go 1.12
+go 1.15
 
 require (
 	github.com/docker/go-connections v0.4.0
