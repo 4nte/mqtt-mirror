@@ -64,7 +64,6 @@ func NewMQTTContainer(requireAuth bool) (MqttBroker, error) {
 	}
 
 	configFilePath := path.Join(basepath, configFile)
-	fmt.Println("configFilePath", configFilePath)
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
 		Image:        "docker.io/volantmq/volantmq:v0.4.0-rc.8",
