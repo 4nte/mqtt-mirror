@@ -48,7 +48,7 @@ func getBrokerHostString(broker url.URL) string {
 	return host
 }
 
-func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeout time.Duration) func() {
+func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeout time.Duration) (func(), error) {
 	done := make(chan struct{})
 	if timeout > 0 {
 		go func() {
@@ -64,14 +64,14 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 
 	sourceClient, err := mqtt.NewClient(sourceHost, source.User.Username(), sourcePassword, true)
 	if err != nil {
-		panic(err)
+		return func() {}, err
 	}
 
 	targetHost := getBrokerHostString(target)
 	targetPassword, _ := target.User.Password()
 	targetClient, err := mqtt.NewClient(targetHost, target.User.Username(), targetPassword, false)
 	if err != nil {
-		panic(err)
+		return func() {}, err
 	}
 	qos := byte(0)
 	messageHandler := createSourceMessageHandler(targetClient, verbose)
@@ -91,14 +91,14 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 	}
 
 	terminate := func() {
-		sourceClient.Disconnect(0)
-		targetClient.Disconnect(0)
+		//sourceClient.Disconnect(0)
+		//targetClient.Disconnect(0)
 	}
 	go func() {
 		<-done
 		terminate()
 	}()
 
-	return terminate
+	return terminate, nil
 
 }
