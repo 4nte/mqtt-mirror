@@ -53,7 +53,7 @@ tcp://target.xyz:1883 \
 
 **Helm chart** :package:
 ```
-helm repo add 4nte https://raw.githubusercontent.com/4nte/
+helm repo add 4nte https://4nte.github.io/helm-charts/
 helm install mqtt-mirror 4nte/mqtt-mirror \
 --set mqtt.source=$SOURCE_BROKER \
 --set mqtt.target=$TARGET_BROKER \
