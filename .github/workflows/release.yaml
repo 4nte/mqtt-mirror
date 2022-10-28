@@ -40,7 +40,7 @@ jobs:
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
 
       - name: goreleaser
-        uses: goreleaser/goreleaser-action@master
+        uses: goreleaser/goreleaser-action@v3
         with:
           args: release
           workdir: ${{github.workspace}}/mqtt-mirror

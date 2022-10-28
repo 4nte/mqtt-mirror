@@ -40,8 +40,7 @@ dockers:
     # GOARM of the built binary that should be used.
     goarm: ''
 
-    # Name templates of the built binaries that should be used.
-    binaries:
+    ids:
       - mqtt-mirror
 
     # Templates of the Docker image names.
@@ -70,7 +69,7 @@ dockers:
 brews:
   -
     # Github repository to push the tap to.
-    github:
+    tap:
       owner: 4nte
       name: homebrew-tap
 
