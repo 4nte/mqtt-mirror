@@ -3,16 +3,18 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"sync"
+
 	"github.com/docker/go-connections/nat"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"net/url"
-	"sync"
+
+	"path"
 
 	"github.com/surgemq/message"
 	"github.com/testcontainers/testcontainers-go"
-	"path"
 
 	"path/filepath"
 	"runtime"
@@ -165,7 +167,7 @@ func TestMirror_withAuth(t *testing.T) {
 		panic(err)
 	}
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "")
 	require.NoError(t, err)
 
 	mutex := sync.Mutex{}
