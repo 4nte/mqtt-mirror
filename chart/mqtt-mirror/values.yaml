@@ -10,6 +10,7 @@ image:
   pullPolicy: IfNotPresent
 
 verbose: false
+name: "" # name of the mqtt-mirror instance (used as clientID)
 
 mqtt:
   source: ""

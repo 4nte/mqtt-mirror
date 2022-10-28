@@ -39,6 +39,10 @@ spec:
             - name: VERBOSE
               value: "{{ .Values.verbose }}"
             {{end}}
+            {{ if .Values.name }}
+            - name: NAME
+              value: "{{ .Values.name }}"
+            {{end}}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
