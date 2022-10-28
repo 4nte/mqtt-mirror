@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/4nte/mqtt-mirror/internal"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/4nte/mqtt-mirror/internal"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var ( // Flags
@@ -19,6 +20,8 @@ var ( // Flags
 	sourceURI  string
 	targetURI  string
 	configFile string
+
+	instanceName string
 
 	Topics []string
 )
@@ -93,6 +96,11 @@ var rootCmd = &cobra.Command{
 		if target == "" {
 			target = viper.GetString("target")
 		}
+		var instanceName = viper.GetString("name")
+		if len(instanceName) == 0 {
+			instanceName = newLen(8)
+
+		}
 
 		topicFilter := viper.GetStringSlice("topic_filter")
 		isVerbose := viper.GetBool("verbose")
@@ -106,7 +114,7 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0)
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName)
 		if err != nil {
 			panic(err)
 		}
@@ -124,6 +132,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&sourceURI, "source", "", "mqtt source URI")
 	rootCmd.PersistentFlags().StringVar(&targetURI, "target", "", "mqtt target URI")
 
+	rootCmd.PersistentFlags().StringVar(&instanceName, "name", "", "mqtt-mirror instance name. If not specified, will be randomly generated")
+
 	rootCmd.PersistentFlags().StringVar(&targetURI, "config", "", "config file")
 
 	err := viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
@@ -134,6 +144,7 @@ func init() {
 	viper.BindPFlag("target", rootCmd.PersistentFlags().Lookup("target"))
 	viper.BindPFlag("topic_filter", rootCmd.PersistentFlags().Lookup("topic_filter"))
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag("name", rootCmd.PersistentFlags().lookup("name"))
 }
 
 func initConfig() {
