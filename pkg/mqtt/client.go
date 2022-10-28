@@ -2,27 +2,33 @@ package mqtt
 
 import (
 	"fmt"
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"time"
+
+	paho "github.com/eclipse/paho.mqtt.golang"
+	"go.uber.org/zap"
 )
 
-func NewClient(broker string, username string, password string, isSource bool) (paho.Client, error) {
-	var alias string
+func NewClient(broker string, username string, password string, isSource bool, clientName string) (paho.Client, error) {
+	var role string
 	if isSource {
-		alias = "source"
+		role = "source"
 	} else {
-		alias = "target"
+		role = "target"
 	}
-	id := fmt.Sprintf("mqtt-mirror-%s", alias)
+
+	if len(clientName) > 10 {
+		return nil, fmt.Errorf("client name can have maximum of 10 characters")
+	}
+	id := fmt.Sprintf("mqtt-mirror-%s", clientName)
 
 	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(3 * time.Minute).SetUsername(username).SetPassword(password).SetClientID(id)
 
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
-		fmt.Printf("connection established to %s (%s)\n", broker, alias)
+		zap.L().Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
 		// TODO: channel
 	})
 	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
-		fmt.Print(fmt.Errorf("connection lost with %s (%s)\n", broker, alias))
+		zap.L().Error("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
 		// TODO: channel
 	})
 
@@ -32,7 +38,7 @@ func NewClient(broker string, username string, password string, isSource bool) (
 	connTimeout := 15 * time.Second
 	ok := token.WaitTimeout(connTimeout)
 	if !ok {
-		err := fmt.Errorf("connection timeout exceeded (%s): %s (%s)", connTimeout.String(), broker, alias)
+		err := fmt.Errorf("connection timeout exceeded (%s): %s (%s)", connTimeout.String(), broker, role)
 		return nil, err
 	}
 
