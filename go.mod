@@ -3,6 +3,7 @@ module github.com/4nte/mqtt-mirror
 go 1.19
 
 require (
+	github.com/dchest/uniuri v1.2.0
 	github.com/docker/go-connections v0.4.0
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -14,7 +15,6 @@ require (
 )
 
 require (
-	github.com/dchest/uniuri v1.2.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 )
