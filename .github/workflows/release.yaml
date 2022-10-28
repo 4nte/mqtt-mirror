@@ -52,7 +52,7 @@ jobs:
       - name:  Create helm package
         uses: stefanprodan/kube-tools@v1
         with:
-          helm: 2.16.1
+          helm: 2.17.0
           command: |
             export SEMVER=${GITHUB_REF#refs/tags/v}
 
