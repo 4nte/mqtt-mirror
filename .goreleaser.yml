@@ -2,20 +2,13 @@
 # Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-    # you may remove this if you don't use vgo
-    - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
+  # you may remove this if you don't use vgo
+  - go mod tidy
+  # you may remove this if you don't need go generate
+  - go generate ./...
 builds:
 - env:
   - CGO_ENABLED=0
-archives:
-- replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -29,60 +22,58 @@ changelog:
 
 
 dockers:
-  # You can have multiple Docker images.
-  -
-    # GOOS of the built binary that should be used.
-    goos: linux
+# You can have multiple Docker images.
+- # GOOS of the built binary that should be used.
+  goos: linux
 
-    # GOARCH of the built binary that should be used.
-    goarch: amd64
+  # GOARCH of the built binary that should be used.
+  goarch: amd64
 
-    # GOARM of the built binary that should be used.
-    goarm: ''
+  # GOARM of the built binary that should be used.
+  goarm: ''
 
-    ids:
-      - mqtt-mirror
+  ids:
+  - mqtt-mirror
 
-    # Templates of the Docker image names.
-    image_templates:
-      - "antegulin/mqtt-mirror:latest"
-      - "antegulin/mqtt-mirror:{{ .Tag }}"
-      - "antegulin/mqtt-mirror:v{{ .Major }}"
+  # Templates of the Docker image names.
+  image_templates:
+  - "antegulin/mqtt-mirror:latest"
+  - "antegulin/mqtt-mirror:{{ .Tag }}"
+  - "antegulin/mqtt-mirror:v{{ .Major }}"
 
-    # Skips the docker push. Could be useful if you also do draft releases.
-    # If set to auto, the release will not be pushed to the docker repository
-    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
-    # Defaults to false.
-    skip_push: false
+  # Skips the docker push. Could be useful if you also do draft releases.
+  # If set to auto, the release will not be pushed to the docker repository
+  # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
+  # Defaults to false.
+  skip_push: false
 
-    # Path to the Dockerfile (from the project root).
-    dockerfile: Dockerfile
+  # Path to the Dockerfile (from the project root).
+  dockerfile: Dockerfile
 
-    # Template of the docker build flags.
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+  # Template of the docker build flags.
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
 
 brews:
-  -
-    # Github repository to push the tap to.
-    tap:
-      owner: 4nte
-      name: homebrew-tap
+- # Github repository to push the tap to.
+  tap:
+    owner: 4nte
+    name: homebrew-tap
 
-    # Git author used to commit to the repository.
-    # Defaults are shown.
-    commit_author:
-      name: goreleaserbot
-      email: gnante0@gmail.com
+  # Git author used to commit to the repository.
+  # Defaults are shown.
+  commit_author:
+    name: goreleaserbot
+    email: gnante0@gmail.com
 
-    # Your app's homepage.
-    # Default is empty.
-    homepage: "https://github.com/4nte/mqtt-mirror"
+  # Your app's homepage.
+  # Default is empty.
+  homepage: "https://github.com/4nte/mqtt-mirror"
 
-    # Your app's description.
-    # Default is empty.
-    description: "Replicate MQTT traffic from one broker to another."
+  # Your app's description.
+  # Default is empty.
+  description: "Replicate MQTT traffic from one broker to another."
