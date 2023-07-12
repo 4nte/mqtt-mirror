@@ -48,6 +48,10 @@ func getBrokerHostString(broker url.URL) string {
 }
 
 func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeout time.Duration, instanceName string) (func(), error) {
+	logger, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync() // flushes buf
+
 	done := make(chan struct{})
 	if timeout > 0 {
 		go func() {
@@ -55,6 +59,7 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 			done <- struct{}{}
 		}()
 	}
+	zap.L().Sugar().Infof("using clientName: %s", instanceName)
 
 	zap.L().Info("mirroring traffic", zap.String("source_host", source.Host), zap.String("target_host", target.Host))
 
@@ -90,8 +95,8 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 	}
 
 	terminate := func() {
-		//sourceClient.Disconnect(0)
-		//targetClient.Disconnect(0)
+		sourceClient.Disconnect(0)
+		targetClient.Disconnect(0)
 	}
 	go func() {
 		<-done
@@ -99,5 +104,4 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 	}()
 
 	return terminate, nil
-
 }
