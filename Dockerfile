@@ -1,9 +1,5 @@
-FROM scratch
+FROM busybox
 
-COPY mqtt-mirror /
-
-ENV SOURCE ""
-ENV TARGET ""
-ENV TOPIC_FILTER "#"
-
-CMD /mqtt-mirror $SOURCE $TARGET --verbose --topic_filter $TOPIC_FILTER
+COPY mqtt-mirror /bin/mqtt-mirror
+RUN chmod +x /bin/mqtt-mirror
+ENTRYPOINT ["/bin/mqtt-mirror" ]
