@@ -43,5 +43,6 @@ jobs:
         token: ${{ secrets.PAT }}
         owner: 4nte
         repository: helm-charts
+        branch: master
         chart_version: ${{ steps.get_version.outputs.version-without-v }}
         app_version: ${{ steps.get_version.outputs.version-without-v }}
