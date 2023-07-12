@@ -21,15 +21,13 @@ func NewClient(broker string, username string, password string, isSource bool, c
 	}
 	id := fmt.Sprintf("mqtt-mirror-%s", clientName)
 
-	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(3 * time.Minute).SetUsername(username).SetPassword(password).SetClientID(id)
+	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(15 * time.Second).SetUsername(username).SetPassword(password).SetClientID(id)
 
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
 		zap.L().Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
-		// TODO: channel
 	})
 	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
-		zap.L().Error("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
-		// TODO: channel
+		zap.L().Fatal("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
 	})
 
 	client := paho.NewClient(clientOpts)
