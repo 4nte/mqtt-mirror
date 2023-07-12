@@ -26,14 +26,6 @@ jobs:
         path: mqtt-mirror
         fetch-depth: 0
 
-    - name: Checkout helm package repository repo
-      uses: actions/checkout@v2
-      with:
-        token: ${{ secrets.PAT }}
-        repository: 4nte/helm-charts
-        path: helm-charts
-        ref: master
-
     - name: Docker Login
       if: success() && startsWith(github.ref, 'refs/tags/')
       env:
@@ -54,14 +46,6 @@ jobs:
       uses: stefanprodan/helm-gh-pages@v1.4.1
       with:
         token: ${{ secrets.PAT }}
-        repository: charts
+        repository: 4nte/helm-charts
         chart_version: ${{ steps.get_version.outputs.version-without-v }}
         app_version: ${{ steps.get_version.outputs.version-without-v }}
-
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        branch: master
-        github_token: ${{ secrets.PAT }}
-        repository: helm-charts
-        directory: ${{github.workspace}}/helm-charts
