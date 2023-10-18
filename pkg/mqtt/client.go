@@ -8,7 +8,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewClient(broker string, username string, password string, isSource bool, clientName string) (paho.Client, error) {
+func NewClient(
+	broker string,
+	username string,
+	password string,
+	isSource bool,
+	clientName string,
+	onConnctHandler func(paho.Client),
+) (paho.Client, error) {
 	var role string
 	if isSource {
 		role = "source"
@@ -21,10 +28,18 @@ func NewClient(broker string, username string, password string, isSource bool, c
 	}
 	id := fmt.Sprintf("mqtt-mirror-%s", clientName)
 
-	clientOpts := paho.NewClientOptions().AddBroker(broker).SetAutoReconnect(true).SetMaxReconnectInterval(15 * time.Second).SetUsername(username).SetPassword(password).SetClientID(id)
+	clientOpts := paho.NewClientOptions().
+		AddBroker(broker).
+		SetAutoReconnect(true).
+		SetMaxReconnectInterval(15 * time.Second).
+		SetUsername(username).
+		SetPassword(password).
+		SetClientID(id)
 
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
-		zap.L().Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
+		zap.L().
+			Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
+		onConnctHandler(client)
 	})
 	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
 		zap.L().Fatal("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
@@ -36,7 +51,12 @@ func NewClient(broker string, username string, password string, isSource bool, c
 	connTimeout := 15 * time.Second
 	ok := token.WaitTimeout(connTimeout)
 	if !ok {
-		err := fmt.Errorf("connection timeout exceeded (%s): %s (%s)", connTimeout.String(), broker, role)
+		err := fmt.Errorf(
+			"connection timeout exceeded (%s): %s (%s)",
+			connTimeout.String(),
+			broker,
+			role,
+		)
 		return nil, err
 	}
 

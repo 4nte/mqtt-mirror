@@ -4,9 +4,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 	mqtt2 "github.com/eclipse/paho.mqtt.golang"
 	"go.uber.org/zap"
+
+	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 )
 
 func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.MessageHandler {
@@ -16,8 +17,14 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.M
 			payload := message.Payload()
 			qos := message.Qos()
 			retained := message.Retained()
-			zap.L().Info("message replicated", zap.Int("bytes_len", len(payload)), zap.String("topic", topic), zap.Int("QoS", int(qos)), zap.Bool("retained", retained))
-			targetClient.Publish(message.Topic(), message.Qos(), message.Retained(), message.Payload())
+			zap.L().
+				Info("message replicated", zap.Int("bytes_len", len(payload)), zap.String("topic", topic), zap.Int("QoS", int(qos)), zap.Bool("retained", retained))
+			targetClient.Publish(
+				message.Topic(),
+				message.Qos(),
+				message.Retained(),
+				message.Payload(),
+			)
 		}
 	}
 
@@ -47,7 +54,14 @@ func getBrokerHostString(broker url.URL) string {
 	return host
 }
 
-func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeout time.Duration, instanceName string) (func(), error) {
+func Mirror(
+	source url.URL,
+	target url.URL,
+	topics []string,
+	verbose bool,
+	timeout time.Duration,
+	instanceName string,
+) (func(), error) {
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
 	defer logger.Sync() // flushes buf
@@ -61,37 +75,55 @@ func Mirror(source url.URL, target url.URL, topics []string, verbose bool, timeo
 	}
 	zap.L().Sugar().Infof("using clientName: %s", instanceName)
 
-	zap.L().Info("mirroring traffic", zap.String("source_host", source.Host), zap.String("target_host", target.Host))
+	zap.L().
+		Info("mirroring traffic", zap.String("source_host", source.Host), zap.String("target_host", target.Host))
 
 	sourceHost := getBrokerHostString(source)
 	sourcePassword, _ := source.User.Password()
 
-	sourceClient, err := mqtt.NewClient(sourceHost, source.User.Username(), sourcePassword, true, instanceName)
-	if err != nil {
-		return func() {}, err
-	}
-
 	targetHost := getBrokerHostString(target)
 	targetPassword, _ := target.User.Password()
-	targetClient, err := mqtt.NewClient(targetHost, target.User.Username(), targetPassword, false, instanceName)
+	targetClient, err := mqtt.NewClient(
+		targetHost,
+		target.User.Username(),
+		targetPassword,
+		false,
+		instanceName,
+		func(c mqtt2.Client) {},
+	)
 	if err != nil {
 		return func() {}, err
 	}
+
 	qos := byte(0)
 	messageHandler := createSourceMessageHandler(targetClient, verbose)
-	if len(topics) == 0 {
-		// Subscribe to all
-		sourceClient.Subscribe("#", qos, messageHandler)
-		zap.L().Info("mirroring *all* topics")
-	} else {
-		topicFilterMap := make(map[string]byte)
-		for _, topicFilter := range topics {
-			topicFilterMap[topicFilter] = qos
-		}
+	onConnHandler := func(client mqtt2.Client) {
+		if len(topics) == 0 {
+			// Subscribe to all
+			client.Subscribe("#", qos, messageHandler)
+			zap.L().Info("mirroring *all* topics")
+		} else {
+			topicFilterMap := make(map[string]byte)
+			for _, topicFilter := range topics {
+				topicFilterMap[topicFilter] = qos
+			}
 
-		// Subscribe to specified filters
-		sourceClient.SubscribeMultiple(topicFilterMap, messageHandler)
-		zap.L().Info("mirroring messages", zap.Strings("topics", topics))
+			// Subscribe to specified filters
+			client.SubscribeMultiple(topicFilterMap, messageHandler)
+			zap.L().Info("mirroring messages", zap.Strings("topics", topics))
+		}
+	}
+
+	sourceClient, err := mqtt.NewClient(
+		sourceHost,
+		source.User.Username(),
+		sourcePassword,
+		true,
+		instanceName,
+		onConnHandler,
+	)
+	if err != nil {
+		return func() {}, err
 	}
 
 	terminate := func() {
