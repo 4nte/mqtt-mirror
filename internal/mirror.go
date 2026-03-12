@@ -100,8 +100,13 @@ func Mirror(
 	onConnHandler := func(client mqtt2.Client) {
 		if len(topics) == 0 {
 			// Subscribe to all
-			client.Subscribe("#", qos, messageHandler)
-			zap.L().Info("mirroring *all* topics")
+			token := client.Subscribe("#", qos, messageHandler)
+			token.Wait()
+			if token.Error() != nil {
+				zap.L().Error("subscribe failed", zap.Error(token.Error()))
+			} else {
+				zap.L().Info("mirroring *all* topics")
+			}
 		} else {
 			topicFilterMap := make(map[string]byte)
 			for _, topicFilter := range topics {
@@ -109,8 +114,13 @@ func Mirror(
 			}
 
 			// Subscribe to specified filters
-			client.SubscribeMultiple(topicFilterMap, messageHandler)
-			zap.L().Info("mirroring messages", zap.Strings("topics", topics))
+			token := client.SubscribeMultiple(topicFilterMap, messageHandler)
+			token.Wait()
+			if token.Error() != nil {
+				zap.L().Error("subscribe failed", zap.Error(token.Error()))
+			} else {
+				zap.L().Info("mirroring messages", zap.Strings("topics", topics))
+			}
 		}
 	}
 

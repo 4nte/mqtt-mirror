@@ -3,9 +3,12 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
 	"sync"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/require"
@@ -48,13 +51,14 @@ import (
 type MqttBroker struct {
 	nat.PortBinding
 	Terminate func()
+	container testcontainers.Container
 }
 
 func (b MqttBroker) Uri() string {
 	return fmt.Sprintf("tcp://%s:%s", b.HostIP, b.HostPort)
 }
 
-func NewMQTTContainer(requireAuth bool) (MqttBroker, error) {
+func NewMQTTContainer(requireAuth bool, hostPort ...string) (MqttBroker, error) {
 	_, b, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(b)
 
@@ -65,11 +69,16 @@ func NewMQTTContainer(requireAuth bool) (MqttBroker, error) {
 		configFile = "volantmq-config-no-auth.yaml"
 	}
 
+	exposedPort := "1883/tcp"
+	if len(hostPort) > 0 && hostPort[0] != "" {
+		exposedPort = hostPort[0] + ":1883/tcp"
+	}
+
 	configFilePath := path.Join(basepath, configFile)
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
 		Image:        "docker.io/volantmq/volantmq:v0.4.0-rc.8",
-		ExposedPorts: []string{"1883/tcp"},
+		ExposedPorts: []string{exposedPort},
 		//WaitingFor:   wait.ForHTTP("/health/ready").WithPort("8080"),
 		//WaitingFor:   wait.ForListeningPort("1883/tcp"),
 		WaitingFor: wait.ForLog("listener state: id: :1883 status: started"),
@@ -117,6 +126,7 @@ func NewMQTTContainer(requireAuth bool) (MqttBroker, error) {
 		Terminate: func() {
 			_ = brokerContainer.Terminate(context.Background())
 		},
+		container: brokerContainer,
 	}, nil
 }
 
@@ -221,6 +231,128 @@ func TestMirror_withAuth(t *testing.T) {
 		}
 		require.True(t, isDuplicated, "message not duplicated")
 	}
+}
+
+func waitForTCP(t *testing.T, addr string, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, time.Second)
+		if err == nil {
+			conn.Close()
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	t.Fatalf("tcp endpoint %s not ready after %s", addr, timeout)
+}
+
+func TestMirror_reconnect(t *testing.T) {
+	// Use a fixed host port so the port mapping survives container restart
+	sourceBroker, err := NewMQTTContainer(true, "21883")
+	require.NoError(t, err, "failed to start source broker")
+	defer sourceBroker.Terminate()
+
+	destinationBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start destination broker")
+	defer destinationBroker.Terminate()
+
+	username := "testuser"
+	password := "testpassword"
+
+	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, sourceBroker.HostIP, sourceBroker.HostPort))
+	require.NoError(t, err)
+	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
+	require.NoError(t, err)
+
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "")
+	require.NoError(t, err)
+	defer terminateMirror()
+
+	mutex := sync.Mutex{}
+	var destinationMessages []paho.Message
+
+	// Subscribe on destination to verify mirrored messages
+	destClient := NewClient(destinationBroker.Uri(), username, password, "dest-sub")
+	token := destClient.Subscribe("#", message.QosAtLeastOnce, func(client paho.Client, msg paho.Message) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		destinationMessages = append(destinationMessages, msg)
+	})
+	token.Wait()
+
+	// Phase 1: Publish before restart — verify baseline mirroring works
+	srcClient := NewClient(sourceBroker.Uri(), username, password, "src-pub")
+	token = srcClient.Publish("test/before", message.QosAtLeastOnce, false, []byte("before-restart"))
+	token.Wait()
+
+	time.Sleep(2 * time.Second)
+	mutex.Lock()
+	require.Len(t, destinationMessages, 1, "baseline: message should be mirrored before restart")
+	mutex.Unlock()
+
+	// Phase 2: Restart the source broker to simulate disconnection
+	ctx := context.Background()
+	dockerClient, err := client.NewEnvClient()
+	require.NoError(t, err, "failed to create docker client")
+	defer dockerClient.Close()
+
+	containerID := sourceBroker.container.GetContainerID()
+	stopTimeout := 5 * time.Second
+	err = dockerClient.ContainerStop(ctx, containerID, &stopTimeout)
+	require.NoError(t, err, "failed to stop source broker")
+
+	time.Sleep(2 * time.Second)
+
+	err = dockerClient.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+	require.NoError(t, err, "failed to restart source broker")
+
+	// Wait for the MQTT broker inside the container to accept TCP connections
+	brokerAddr := fmt.Sprintf("%s:%s", sourceBroker.HostIP, sourceBroker.HostPort)
+	waitForTCP(t, brokerAddr, 30*time.Second)
+
+	// Phase 3: Publish after restart — verify mirroring resumed.
+	// Disconnect old test publisher and wait for the broker to accept MQTT
+	// connections (TCP being open is not enough — the MQTT handler needs time).
+	srcClient.Disconnect(0)
+	var srcClient2 paho.Client
+	for i := 0; i < 15; i++ {
+		func() {
+			defer func() { recover() }()
+			c := NewClient(sourceBroker.Uri(), username, password, "src-pub2")
+			if c.IsConnected() {
+				srcClient2 = c
+			}
+		}()
+		if srcClient2 != nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	require.NotNil(t, srcClient2, "failed to connect test publisher after broker restart")
+	require.True(t, srcClient2.IsConnected(), "test publisher not connected")
+
+	// Poll: publish and wait for the message to be mirrored.
+	// Paho's auto-reconnect uses exponential backoff (up to 15s),
+	// so the mirror may take up to ~30s to reconnect and re-subscribe.
+	deadline := time.Now().Add(45 * time.Second)
+	for time.Now().Before(deadline) {
+		token = srcClient2.Publish("test/after", message.QosAtLeastOnce, false, []byte("after-restart"))
+		token.Wait()
+
+		time.Sleep(3 * time.Second)
+
+		mutex.Lock()
+		count := len(destinationMessages)
+		mutex.Unlock()
+		if count >= 2 {
+			break
+		}
+	}
+
+	mutex.Lock()
+	require.GreaterOrEqual(t, len(destinationMessages), 2, "after reconnect: message should be mirrored after broker restart")
+	mutex.Unlock()
 }
 
 // TODO: enable after volantmq broker supports anonymous logins
