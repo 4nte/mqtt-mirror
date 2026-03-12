@@ -82,6 +82,7 @@ func NewMQTTContainer(requireAuth bool, hostPort ...string) (MqttBroker, error) 
 		//WaitingFor:   wait.ForHTTP("/health/ready").WithPort("8080"),
 		//WaitingFor:   wait.ForListeningPort("1883/tcp"),
 		WaitingFor: wait.ForLog("listener state: id: :1883 status: started"),
+		SkipReaper: true,
 		Env: map[string]string{
 			"VOLANTMQ_CONFIG": "/etc/volantmq-config.yaml",
 		},
