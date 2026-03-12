@@ -42,7 +42,7 @@ func NewClient(
 		onConnctHandler(client)
 	})
 	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
-		zap.L().Fatal("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
+		zap.L().Warn("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
 	})
 
 	client := paho.NewClient(clientOpts)
