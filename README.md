@@ -7,9 +7,9 @@
 
 
 <p align="center">
-  <img alt="mqtt-mirror diagram" src="https://i.imgur.com/EOGwXRf.png" height="150" />
-  <h3 align="center">mqtt-mirror</h3>
-<p align="center">Fork MQTT traffic with no fuss, deploy in seconds. Kubernetes ready.</p>
+  <img alt="mqtt-mirror diagram" src="./assets/diagram.svg" width="700" />
+</p>
+<p align="center"><b>Fork MQTT traffic with no fuss, deploy in seconds. Kubernetes ready.</b></p>
 
 
 ---

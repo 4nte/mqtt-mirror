@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" width="800" height="220" fill="none">
+  <style>
+    .box-text { font-family: 'Segoe UI', system-ui, Arial, sans-serif; fill: #1a202c; }
+    .label-text { font-family: 'Segoe UI', system-ui, Arial, sans-serif; fill: #cbd5e0; }
+    .sub-text { font-family: 'Segoe UI', system-ui, Arial, sans-serif; fill: #2d3748; }
+  </style>
+
+  <defs>
+    <marker id="arrowL" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#cbd5e0"/>
+    </marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#cbd5e0"/>
+    </marker>
+  </defs>
+
+  <!-- Source Broker -->
+  <rect x="30" y="50" width="180" height="100" rx="14" fill="#a7d8d0" stroke="#6bb5a8" stroke-width="2"/>
+  <text x="120" y="92" text-anchor="middle" class="box-text" font-size="16" font-weight="700">Source Broker</text>
+  <text x="120" y="114" text-anchor="middle" class="sub-text" font-size="12">MQTT</text>
+
+  <!-- Arrow: Source → mqtt-mirror -->
+  <line x1="210" y1="100" x2="290" y2="100" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowL)"/>
+  <text x="250" y="88" text-anchor="middle" class="label-text" font-size="11" font-weight="500">subscribe</text>
+
+  <!-- mqtt-mirror (center, prominent) -->
+  <rect x="298" y="38" width="204" height="124" rx="14" fill="#c4b5e0" stroke="#a48ec4" stroke-width="2"/>
+  <text x="400" y="90" text-anchor="middle" class="box-text" font-size="18" font-weight="700">mqtt-mirror</text>
+  <text x="400" y="114" text-anchor="middle" class="sub-text" font-size="11">messages are replicated</text>
+  <text x="400" y="130" text-anchor="middle" class="sub-text" font-size="11">preserving QoS &amp; Retain</text>
+
+  <!-- Arrow: mqtt-mirror → Target -->
+  <line x1="502" y1="100" x2="582" y2="100" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowR)"/>
+  <text x="542" y="88" text-anchor="middle" class="label-text" font-size="11" font-weight="500">publish</text>
+
+  <!-- Target Broker -->
+  <rect x="590" y="50" width="180" height="100" rx="14" fill="#f0c4a8" stroke="#d9a07e" stroke-width="2"/>
+  <text x="680" y="92" text-anchor="middle" class="box-text" font-size="16" font-weight="700">Target Broker</text>
+  <text x="680" y="114" text-anchor="middle" class="sub-text" font-size="12">MQTT</text>
+</svg>
