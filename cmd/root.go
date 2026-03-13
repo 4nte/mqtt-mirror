@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/4nte/mqtt-mirror/internal"
@@ -29,8 +30,58 @@ var ( // Flags
 	Topics []string
 )
 
+// parseBrokerURI parses a raw broker URI, correctly handling special characters
+// in the userinfo (username:password) portion that would otherwise confuse url.Parse.
+func parseBrokerURI(rawURI string) (*url.URL, error) {
+	schemeIdx := strings.Index(rawURI, "://")
+	if schemeIdx == -1 {
+		return url.Parse(rawURI)
+	}
+
+	scheme := rawURI[:schemeIdx]
+	authority := rawURI[schemeIdx+3:] // everything after "://"
+
+	// Find the last '@' — this separates userinfo from host, and we use the
+	// last one because '@' may appear in the password.
+	atIdx := strings.LastIndex(authority, "@")
+	if atIdx == -1 {
+		// No userinfo, parse directly
+		return url.Parse(rawURI)
+	}
+
+	userinfo := authority[:atIdx]
+	hostPart := authority[atIdx+1:]
+
+	// Split userinfo on first ':' into username and password
+	var username, password string
+	colonIdx := strings.Index(userinfo, ":")
+	if colonIdx == -1 {
+		username = userinfo
+	} else {
+		username = userinfo[:colonIdx]
+		password = userinfo[colonIdx+1:]
+	}
+
+	// Unescape any existing percent-encoding so that url.UserPassword
+	// can re-encode uniformly (avoids double-encoding).
+	username, err := url.PathUnescape(username)
+	if err != nil {
+		return nil, fmt.Errorf("invalid username encoding: %w", err)
+	}
+	password, err = url.PathUnescape(password)
+	if err != nil {
+		return nil, fmt.Errorf("invalid password encoding: %w", err)
+	}
+
+	// Reconstruct with proper encoding via url.UserPassword
+	encoded := url.UserPassword(username, password)
+	reconstructed := fmt.Sprintf("%s://%s@%s", scheme, encoded.String(), hostPart)
+
+	return url.Parse(reconstructed)
+}
+
 func isValidUrl(checkUrl string) error {
-	parsed, err := url.Parse(checkUrl)
+	parsed, err := parseBrokerURI(checkUrl)
 	if err != nil {
 		return err
 	}
@@ -109,11 +160,11 @@ var rootCmd = &cobra.Command{
 		topicFilter := viper.GetStringSlice("topic_filter")
 		isVerbose := viper.GetBool("verbose")
 
-		sourceURL, err := url.Parse(source)
+		sourceURL, err := parseBrokerURI(source)
 		if err != nil {
 			panic(err)
 		}
-		targetURL, err := url.Parse(target)
+		targetURL, err := parseBrokerURI(target)
 		if err != nil {
 			panic(err)
 		}
