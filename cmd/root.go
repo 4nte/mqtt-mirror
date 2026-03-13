@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var version = "dev"
+
 var ( // Flags
 	cfgFile string
 	Verbose bool
@@ -41,8 +43,9 @@ func isValidUrl(checkUrl string) error {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "mqtt-mirror source target",
-	Short: "lightweight traffic shadowing tool",
+	Use:     "mqtt-mirror source target",
+	Version: version,
+	Short:   "lightweight traffic shadowing tool",
 	Long:  `lightweight traffic shadowing tool purposely built to replicate traffic from one broker to another.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		var source, target string

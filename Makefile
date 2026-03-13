@@ -7,7 +7,7 @@ setup:
 
 compile:
 	mkdir -p out
-	go build -o $(APP_EXECUTABLE) main.go
+	go build -ldflags="-X github.com/4nte/mqtt-mirror/cmd.version=dev" -o $(APP_EXECUTABLE) main.go
 
 lint:
 	@golint ./... | { grep -vwE "exported (var|function|method|type|const) \S+ should have comment" || true; }
