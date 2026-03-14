@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"errors"
 
@@ -163,13 +165,20 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse target URI: %w", err)
 		}
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName)
+		healthPort := viper.GetInt("health_port")
+		health := internal.NewHealthServer()
+		health.Start(healthPort)
+
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, health)
 		if err != nil {
 			return fmt.Errorf("mirror failed: %w", err)
 		}
 
 		<-done
 		terminate()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = health.Shutdown(ctx)
 		return nil
 	},
 }
@@ -183,6 +192,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&targetURI, "target", "", "mqtt target URI")
 
 	rootCmd.PersistentFlags().StringVarP(&instanceName, "name", "", "", "mqtt-mirror instance name. If not specified, will be randomly generated")
+	rootCmd.PersistentFlags().Int("health-port", 8080, "port for health check HTTP server")
 
 	rootCmd.PersistentFlags().StringVar(&targetURI, "config", "", "config file")
 
@@ -201,6 +211,9 @@ func init() {
 		panic(err)
 	}
 	if err = viper.BindPFlag("name", rootCmd.PersistentFlags().Lookup("name")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("health_port", rootCmd.PersistentFlags().Lookup("health-port")); err != nil {
 		panic(err)
 	}
 }

@@ -53,6 +53,7 @@ func Mirror(
 	verbose bool,
 	timeout time.Duration,
 	instanceName string,
+	health *HealthServer,
 ) (func(), error) {
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
@@ -126,6 +127,10 @@ func Mirror(
 	)
 	if err != nil {
 		return func() {}, err
+	}
+
+	if health != nil {
+		health.SetClients(sourceClient, targetClient)
 	}
 
 	terminate := func() {

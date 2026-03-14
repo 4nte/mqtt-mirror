@@ -17,6 +17,9 @@ mqtt:
   target: ""
   topic_filter: [] # all topics
 
+health:
+  port: 8080
+
 nameOverride: ""
 fullnameOverride: ""
 
