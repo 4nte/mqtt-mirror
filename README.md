@@ -51,7 +51,7 @@ mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkle
 
 ## Get started
 
-Mqtt-mirror is available as a **standalone binary**, **docker image** and **helm chart**.
+Mqtt-mirror is available as a **standalone binary**, **docker image**, **npm package** and **helm chart**.
 
 ### Install
 
@@ -62,6 +62,14 @@ tcp://username:pass@source.xyz:1883 \
 tcp://target.xyz:1883 \
 --topic_filter=events,sensors/+/temperature/+,logs# \
 --verbose
+```
+
+**npx** (zero install)
+```
+npx mqtt-mirror \
+  tcp://username:pass@source.xyz:1883 \
+  tcp://target.xyz:1883 \
+  --topic_filter=events,sensors/+/temperature/+,logs#
 ```
 
 **Helm chart** :package:
