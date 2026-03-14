@@ -33,14 +33,6 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.M
 	}
 }
 
-type Broker struct {
-	Scheme   string
-	Host     string
-	Port     string
-	Username string
-	Password string
-}
-
 func getBrokerHostString(broker url.URL) string {
 	host := ""
 	if broker.Scheme != "" {
