@@ -43,6 +43,7 @@ dockers:
   image_templates:
   - "antegulin/mqtt-mirror:latest"
   - "antegulin/mqtt-mirror:{{ .Tag }}"
+  - "antegulin/mqtt-mirror:{{ .Version }}"
   - "antegulin/mqtt-mirror:v{{ .Major }}"
 
   # Skips the docker push. Could be useful if you also do draft releases.
@@ -69,6 +70,7 @@ dockers:
   image_templates:
   - "ghcr.io/4nte/mqtt-mirror:latest"
   - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}"
   - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}"
   dockerfile: Dockerfile
   build_flag_templates:
