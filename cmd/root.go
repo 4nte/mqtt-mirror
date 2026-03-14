@@ -24,7 +24,6 @@ var ( // Flags
 
 	sourceURI  string
 	targetURI  string
-	configFile string
 
 	instanceName string
 
@@ -192,10 +191,18 @@ func init() {
 		panic(err)
 	}
 
-	viper.BindPFlag("target", rootCmd.PersistentFlags().Lookup("target"))
-	viper.BindPFlag("topic_filter", rootCmd.PersistentFlags().Lookup("topic_filter"))
-	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-	viper.BindPFlag("name", rootCmd.PersistentFlags().Lookup("name"))
+	if err = viper.BindPFlag("target", rootCmd.PersistentFlags().Lookup("target")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("topic_filter", rootCmd.PersistentFlags().Lookup("topic_filter")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("name", rootCmd.PersistentFlags().Lookup("name")); err != nil {
+		panic(err)
+	}
 }
 
 func initConfig() {
