@@ -40,7 +40,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v6
       with:
         version: "~> v2"
-        args: release --release-notes=RELEASE_NOTES.md
+        args: release --release-notes=changelog/${{ steps.get_version.outputs.version }}.md
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
 
