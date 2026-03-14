@@ -8,9 +8,10 @@ import (
 	"strings"
 	"syscall"
 
+	"errors"
+
 	"github.com/4nte/mqtt-mirror/internal"
 	"github.com/dchest/uniuri"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -54,13 +55,7 @@ func parseBrokerURI(rawURI string) (*url.URL, error) {
 
 	// Split userinfo on first ':' into username and password
 	var username, password string
-	colonIdx := strings.Index(userinfo, ":")
-	if colonIdx == -1 {
-		username = userinfo
-	} else {
-		username = userinfo[:colonIdx]
-		password = userinfo[colonIdx+1:]
-	}
+	username, password, _ = strings.Cut(userinfo, ":")
 
 	// Unescape any existing percent-encoding so that url.UserPassword
 	// can re-encode uniformly (avoids double-encoding).
@@ -120,15 +115,15 @@ var rootCmd = &cobra.Command{
 		}
 
 		if err := isValidUrl(source); err != nil {
-			return errors.Wrap(err, "failed to parse source URI")
+			return fmt.Errorf("failed to parse source URI: %w", err)
 		}
 		if err := isValidUrl(target); err != nil {
-			return errors.Wrap(err, "failed to target source URI")
+			return fmt.Errorf("failed to parse target URI: %w", err)
 		}
 
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		sigs := make(chan os.Signal, 1)
 		done := make(chan bool, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -162,20 +157,21 @@ var rootCmd = &cobra.Command{
 
 		sourceURL, err := parseBrokerURI(source)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("failed to parse source URI: %w", err)
 		}
 		targetURL, err := parseBrokerURI(target)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("failed to parse target URI: %w", err)
 		}
 
 		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("mirror failed: %w", err)
 		}
 
 		<-done
 		terminate()
+		return nil
 	},
 }
 

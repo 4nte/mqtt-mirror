@@ -2,15 +2,14 @@ APP=mqtt-mirror
 APP_EXECUTABLE="./out/$(APP)"
 
 setup:
-	go get golang.org/x/lint/golint
-	go get github.com/mattn/goveralls
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 compile:
 	mkdir -p out
 	go build -ldflags="-X github.com/4nte/mqtt-mirror/cmd.version=dev" -o $(APP_EXECUTABLE) main.go
 
 lint:
-	@golint ./... | { grep -vwE "exported (var|function|method|type|const) \S+ should have comment" || true; }
+	golangci-lint run
 
 format:
 	go fmt ./...
