@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -91,6 +92,165 @@ func TestParseBrokerURI(t *testing.T) {
 			}
 			if u.Host != tt.wantHost {
 				t.Errorf("host = %q, want %q", u.Host, tt.wantHost)
+			}
+		})
+	}
+}
+
+func TestParseBrokerURI_Invalid(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{
+			name:    "invalid percent-encoded username",
+			input:   "tcp://%ZZuser:pass@host:1883",
+			wantErr: true,
+		},
+		{
+			name:    "invalid percent-encoded password",
+			input:   "tcp://user:%ZZpass@host:1883",
+			wantErr: true,
+		},
+		{
+			name:    "missing scheme",
+			input:   "localhost:1883",
+			wantErr: false,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseBrokerURI(tt.input)
+			if tt.wantErr && err == nil {
+				t.Errorf("parseBrokerURI(%q) expected error, got nil", tt.input)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("parseBrokerURI(%q) unexpected error: %v", tt.input, err)
+			}
+		})
+	}
+}
+
+func TestParseBrokerURI_EdgeCases(t *testing.T) {
+	longPass := strings.Repeat("a", 1000)
+	tests := []struct {
+		name     string
+		input    string
+		wantUser string
+		wantPass string
+		wantHost string
+	}{
+		{
+			name:     "very long password",
+			input:    "tcp://user:" + longPass + "@host:1883",
+			wantUser: "user",
+			wantPass: longPass,
+			wantHost: "host:1883",
+		},
+		{
+			name:     "empty password",
+			input:    "tcp://user:@host:1883",
+			wantUser: "user",
+			wantPass: "",
+			wantHost: "host:1883",
+		},
+		{
+			name:     "empty username",
+			input:    "tcp://:pass@host:1883",
+			wantUser: "",
+			wantPass: "pass",
+			wantHost: "host:1883",
+		},
+		{
+			name:     "only @ sign",
+			input:    "tcp://@host:1883",
+			wantUser: "",
+			wantPass: "",
+			wantHost: "host:1883",
+		},
+		{
+			name:     "URI with path",
+			input:    "tcp://user:pass@host:1883/path",
+			wantUser: "user",
+			wantPass: "pass",
+			wantHost: "host:1883",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u, err := parseBrokerURI(tt.input)
+			if err != nil {
+				t.Fatalf("parseBrokerURI(%q) returned error: %v", tt.input, err)
+			}
+
+			var gotUser, gotPass string
+			if u.User != nil {
+				gotUser = u.User.Username()
+				gotPass, _ = u.User.Password()
+			}
+
+			if gotUser != tt.wantUser {
+				t.Errorf("username = %q, want %q", gotUser, tt.wantUser)
+			}
+			if gotPass != tt.wantPass {
+				t.Errorf("password = %q, want %q", gotPass, tt.wantPass)
+			}
+			if u.Host != tt.wantHost {
+				t.Errorf("host = %q, want %q", u.Host, tt.wantHost)
+			}
+		})
+	}
+}
+
+func TestIsValidUrl(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{
+			name:    "valid tcp",
+			input:   "tcp://localhost:1883",
+			wantErr: false,
+		},
+		{
+			name:    "valid with auth",
+			input:   "tcp://user:pass@localhost:1883",
+			wantErr: false,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: true,
+		},
+		{
+			name:    "no host",
+			input:   "tcp://",
+			wantErr: true,
+		},
+		{
+			name:    "garbage",
+			input:   "not-a-url",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := isValidUrl(tt.input)
+			if tt.wantErr && err == nil {
+				t.Errorf("isValidUrl(%q) expected error, got nil", tt.input)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("isValidUrl(%q) unexpected error: %v", tt.input, err)
 			}
 		})
 	}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -311,4 +312,473 @@ func TestMirror_reconnect(t *testing.T) {
 	mutex.Lock()
 	require.GreaterOrEqual(t, len(destinationMessages), 2, "after reconnect: message should be mirrored after broker restart")
 	mutex.Unlock()
+}
+
+// waitForMessages polls until at least minCount messages have been collected, or the timeout expires.
+func waitForMessages(t *testing.T, mu *sync.Mutex, messages *[]paho.Message, minCount int, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(*messages)
+		mu.Unlock()
+		if n >= minCount {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	t.Fatalf("timed out waiting for %d messages, got %d after %s", minCount, len(*messages), timeout)
+}
+
+const testUsername = "testuser"
+const testPassword = "testpassword"
+
+// setupMirror creates two auth brokers and starts a mirror between them.
+// Returns the brokers, a terminate function, and a cleanup function.
+func setupMirror(t *testing.T, topics []string) (MqttBroker, MqttBroker, func()) {
+	t.Helper()
+	sourceBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start source broker")
+
+	destinationBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start destination broker")
+
+	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, sourceBroker.HostIP, sourceBroker.HostPort))
+	require.NoError(t, err)
+	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
+	require.NoError(t, err)
+
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test")
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		terminateMirror()
+		sourceBroker.Terminate()
+		destinationBroker.Terminate()
+	})
+
+	// Give mirror a moment to establish subscriptions
+	time.Sleep(1 * time.Second)
+
+	return sourceBroker, destinationBroker, terminateMirror
+}
+
+func TestMirror_RetainFlag(t *testing.T) {
+	sourceBroker, destinationBroker, _ := setupMirror(t, nil)
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-retain")
+
+	// Publish with retain=true
+	token := srcClient.Publish("retain/test", byte(0), true, []byte("retained-msg"))
+	token.Wait()
+
+	// Wait for mirror to forward
+	time.Sleep(2 * time.Second)
+
+	// Connect a NEW subscriber on destination — new subs see retained messages
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-retain")
+	token = destClient.Subscribe("retain/#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+	mu.Lock()
+	require.True(t, messages[0].Retained(), "expected retained flag to be preserved")
+	mu.Unlock()
+
+	// Now publish with retain=false
+	mu.Lock()
+	messages = nil
+	mu.Unlock()
+
+	token = srcClient.Publish("retain/test2", byte(0), false, []byte("not-retained"))
+	token.Wait()
+
+	waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+	mu.Lock()
+	require.False(t, messages[0].Retained(), "expected retained flag to be false")
+	mu.Unlock()
+}
+
+func TestMirror_QoSPreservation(t *testing.T) {
+	// Although the mirror subscribes at QoS 0, the message handler forwards
+	// messages with the original publish QoS (via message.Qos()). This test
+	// verifies that the QoS level is preserved end-to-end.
+	for _, publishQoS := range []byte{0, 1, 2} {
+		t.Run(fmt.Sprintf("publish_qos_%d", publishQoS), func(t *testing.T) {
+			sourceBroker, destinationBroker, _ := setupMirror(t, nil)
+
+			mu := sync.Mutex{}
+			var messages []paho.Message
+			destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-qos")
+			token := destClient.Subscribe("#", byte(2), func(client paho.Client, msg paho.Message) {
+				mu.Lock()
+				defer mu.Unlock()
+				messages = append(messages, msg)
+			})
+			token.Wait()
+
+			srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-qos")
+			token = srcClient.Publish("qos/test", publishQoS, false, []byte("qos-msg"))
+			token.Wait()
+
+			waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+			mu.Lock()
+			require.Equal(t, publishQoS, messages[0].Qos(),
+				"expected QoS %d on destination, got QoS %d", publishQoS, messages[0].Qos())
+			mu.Unlock()
+		})
+	}
+}
+
+func TestMirror_PayloadEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{"empty payload", []byte{}},
+		{"binary payload", []byte{0x00, 0xFF, 0x01, 0xFE}},
+		{"large payload 64KB", bytes.Repeat([]byte("x"), 64*1024)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sourceBroker, destinationBroker, _ := setupMirror(t, nil)
+
+			mu := sync.Mutex{}
+			var messages []paho.Message
+			destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-pay")
+			token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+				mu.Lock()
+				defer mu.Unlock()
+				messages = append(messages, msg)
+			})
+			token.Wait()
+
+			srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-pay")
+			token = srcClient.Publish("payload/test", byte(0), false, tt.payload)
+			token.Wait()
+
+			waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+			mu.Lock()
+			require.True(t, bytes.Equal(messages[0].Payload(), tt.payload),
+				"payload mismatch: got %d bytes, want %d bytes", len(messages[0].Payload()), len(tt.payload))
+			mu.Unlock()
+		})
+	}
+}
+
+func TestMirror_SpecialTopics(t *testing.T) {
+	tests := []struct {
+		name  string
+		topic string
+	}{
+		{"deep nesting", "a/b/c/d/e/f/g/h"},
+		{"single char", "x"},
+		{"numeric", "123/456"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sourceBroker, destinationBroker, _ := setupMirror(t, nil)
+
+			mu := sync.Mutex{}
+			var messages []paho.Message
+			destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-top")
+			token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+				mu.Lock()
+				defer mu.Unlock()
+				messages = append(messages, msg)
+			})
+			token.Wait()
+
+			srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-top")
+			token = srcClient.Publish(tt.topic, byte(0), false, []byte("topic-test"))
+			token.Wait()
+
+			waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+			mu.Lock()
+			require.Equal(t, tt.topic, messages[0].Topic(), "topic should be preserved exactly")
+			mu.Unlock()
+		})
+	}
+}
+
+func TestMirror_TopicFiltering(t *testing.T) {
+	sourceBroker, destinationBroker, _ := setupMirror(t, []string{"allowed/topic", "other/allowed"})
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-filt")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-filt")
+
+	token = srcClient.Publish("allowed/topic", byte(0), false, []byte("yes1"))
+	token.Wait()
+	token = srcClient.Publish("blocked/topic", byte(0), false, []byte("no"))
+	token.Wait()
+	token = srcClient.Publish("other/allowed", byte(0), false, []byte("yes2"))
+	token.Wait()
+
+	// Wait for forwarded messages
+	waitForMessages(t, &mu, &messages, 2, 5*time.Second)
+
+	// Wait extra to ensure blocked message doesn't arrive
+	time.Sleep(3 * time.Second)
+
+	mu.Lock()
+	require.Len(t, messages, 2, "expected exactly 2 forwarded messages")
+	for _, msg := range messages {
+		require.NotEqual(t, "blocked/topic", msg.Topic(), "blocked topic should not be forwarded")
+	}
+	mu.Unlock()
+}
+
+func TestMirror_WildcardPlus(t *testing.T) {
+	sourceBroker, destinationBroker, _ := setupMirror(t, []string{"sensors/+/temperature"})
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-wc-p")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-wc-p")
+
+	token = srcClient.Publish("sensors/room1/temperature", byte(0), false, []byte("match1"))
+	token.Wait()
+	token = srcClient.Publish("sensors/room2/temperature", byte(0), false, []byte("match2"))
+	token.Wait()
+	token = srcClient.Publish("sensors/room1/humidity", byte(0), false, []byte("nomatch"))
+	token.Wait()
+
+	waitForMessages(t, &mu, &messages, 2, 5*time.Second)
+	time.Sleep(3 * time.Second)
+
+	mu.Lock()
+	require.Len(t, messages, 2, "expected exactly 2 messages matching sensors/+/temperature")
+	mu.Unlock()
+}
+
+func TestMirror_WildcardHash(t *testing.T) {
+	sourceBroker, destinationBroker, _ := setupMirror(t, []string{"home/#"})
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-wc-h")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-wc-h")
+
+	token = srcClient.Publish("home/living/light", byte(0), false, []byte("match1"))
+	token.Wait()
+	token = srcClient.Publish("home/kitchen", byte(0), false, []byte("match2"))
+	token.Wait()
+	token = srcClient.Publish("office/desk", byte(0), false, []byte("nomatch"))
+	token.Wait()
+
+	waitForMessages(t, &mu, &messages, 2, 5*time.Second)
+	time.Sleep(3 * time.Second)
+
+	mu.Lock()
+	require.Len(t, messages, 2, "expected exactly 2 messages matching home/#")
+	mu.Unlock()
+}
+
+func TestMirror_TargetBrokerReconnect(t *testing.T) {
+	sourceBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start source broker")
+	defer sourceBroker.Terminate()
+
+	// Use fixed host port so it survives restart
+	destinationBroker, err := NewMQTTContainer(true, "22883")
+	require.NoError(t, err, "failed to start destination broker")
+	defer destinationBroker.Terminate()
+
+	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, sourceBroker.HostIP, sourceBroker.HostPort))
+	require.NoError(t, err)
+	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
+	require.NoError(t, err)
+
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test")
+	require.NoError(t, err)
+	defer terminateMirror()
+
+	mu := sync.Mutex{}
+	var destMessages []paho.Message
+
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-rc")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		destMessages = append(destMessages, msg)
+	})
+	token.Wait()
+
+	// Phase 1: Baseline
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-rc")
+	token = srcClient.Publish("test/baseline", byte(0), false, []byte("baseline"))
+	token.Wait()
+
+	waitForMessages(t, &mu, &destMessages, 1, 5*time.Second)
+
+	// Phase 2: Stop target broker
+	ctx := context.Background()
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	require.NoError(t, err)
+	defer func() { _ = dockerClient.Close() }()
+
+	containerID := destinationBroker.container.GetContainerID()
+	stopTimeout := 5
+	err = dockerClient.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &stopTimeout})
+	require.NoError(t, err, "failed to stop destination broker")
+
+	time.Sleep(2 * time.Second)
+
+	// Phase 3: Restart target broker
+	err = dockerClient.ContainerStart(ctx, containerID, container.StartOptions{})
+	require.NoError(t, err, "failed to restart destination broker")
+
+	brokerAddr := fmt.Sprintf("%s:%s", destinationBroker.HostIP, destinationBroker.HostPort)
+	waitForTCP(t, brokerAddr, 30*time.Second)
+
+	// Phase 4: Re-subscribe on destination and publish new messages
+	destClient.Disconnect(0)
+	var destClient2 paho.Client
+	for range 15 {
+		clientOpts := paho.NewClientOptions().AddBroker(destinationBroker.Uri()).SetAutoReconnect(true).SetMaxReconnectInterval(30 * time.Second).SetUsername(testUsername).SetPassword(testPassword).SetClientID("dest-rc2")
+		c := paho.NewClient(clientOpts)
+		tok := c.Connect()
+		if tok.WaitTimeout(5*time.Second) && tok.Error() == nil && c.IsConnected() {
+			destClient2 = c
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	require.NotNil(t, destClient2, "failed to reconnect subscriber to destination broker")
+
+	mu.Lock()
+	destMessages = nil
+	mu.Unlock()
+
+	token = destClient2.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		destMessages = append(destMessages, msg)
+	})
+	token.Wait()
+
+	// Poll: publish on source and wait for message to arrive on destination
+	deadline := time.Now().Add(45 * time.Second)
+	for time.Now().Before(deadline) {
+		token = srcClient.Publish("test/after-target-restart", byte(0), false, []byte("recovered"))
+		token.Wait()
+
+		time.Sleep(3 * time.Second)
+
+		mu.Lock()
+		count := len(destMessages)
+		mu.Unlock()
+		if count >= 1 {
+			break
+		}
+	}
+
+	mu.Lock()
+	require.GreaterOrEqual(t, len(destMessages), 1, "mirroring should resume after target broker restart")
+	mu.Unlock()
+}
+
+func TestMirror_MessageBurst(t *testing.T) {
+	sourceBroker, destinationBroker, _ := setupMirror(t, nil)
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-burst")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-burst")
+
+	// Publish 100 messages rapidly
+	for i := range 100 {
+		token = srcClient.Publish("burst/test", byte(0), false, []byte(fmt.Sprintf("msg-%d", i)))
+		token.Wait()
+	}
+
+	waitForMessages(t, &mu, &messages, 100, 10*time.Second)
+
+	mu.Lock()
+	require.Len(t, messages, 100, "all 100 burst messages should be received")
+	mu.Unlock()
+}
+
+func TestMirror_GracefulShutdown(t *testing.T) {
+	sourceBroker, destinationBroker, terminateMirror := setupMirror(t, nil)
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-shut")
+	token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-shut")
+
+	// Verify messages flow before shutdown
+	token = srcClient.Publish("shutdown/before", byte(0), false, []byte("before"))
+	token.Wait()
+	waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+	// Terminate the mirror
+	terminateMirror()
+
+	// Record count after shutdown
+	mu.Lock()
+	countAfterShutdown := len(messages)
+	mu.Unlock()
+
+	// Publish more messages — they should NOT be forwarded
+	token = srcClient.Publish("shutdown/after", byte(0), false, []byte("after"))
+	token.Wait()
+
+	time.Sleep(2 * time.Second)
+
+	mu.Lock()
+	require.Equal(t, countAfterShutdown, len(messages), "no new messages should arrive after terminate()")
+	mu.Unlock()
 }
