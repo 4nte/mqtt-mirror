@@ -22,9 +22,6 @@ All topics are mirrored by default, you can cherry pick topics to be mirrored by
 
 ![Example usage](./img/demo.svg)
 
-#### Should I use this in production?  
-mqtt-mirror is not tested well enough to be relied upon for critical purposes. Until a stable 1.0 release, use with caution.
-
 Take in consideration that outbound traffic will increase by the amount of inbound traffic.  
 Use topic filters to prevent mirroring of unecessary messages.
 
