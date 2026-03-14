@@ -60,6 +60,23 @@ dockers:
   - "--label=org.opencontainers.image.revision={{.FullCommit}}"
   - "--label=org.opencontainers.image.version={{.Version}}"
 
+- goos: linux
+  goarch: amd64
+  ids:
+  - mqtt-mirror
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:latest"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}"
+  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}"
+  dockerfile: Dockerfile
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source=https://github.com/4nte/mqtt-mirror"
+
 brews:
 - # Github repository to push the tap to.
   tap:
