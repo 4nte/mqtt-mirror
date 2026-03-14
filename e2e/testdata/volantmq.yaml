@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: volantmq-config
+data:
+  volantmq.yaml: |
+    system:
+      log:
+        console:
+          level: info
+      acceptor:
+        maxIncoming: 1000
+        preSpawn: 100
+      plugins:
+        enabled:
+          - health
+        config:
+          health:
+            - backend: health
+              config:
+                livenessEndpoint: live
+                readinessEndpoint: ready
+          auth:
+            - name: internal
+              backend: simpleAuth
+              config:
+                users:
+                  testuser: "9f735e0df9a1ddc702bf0a1a7b83033f9f7153a00c29de82cedadc9957289b05"
+    auth:
+      order:
+        - internal
+    mqtt:
+      version:
+        - v3.1.1
+      keepAlive:
+        period: 60
+        force: false
+      options:
+        connectTimeout: 2
+        offlineQoS0: true
+        sessionDups: false
+        retainAvail: true
+        subsOverlap: false
+        subsId: false
+        subsShared: false
+        subsWildcard: true
+        receiveMax: 65535
+        maxPacketSize: 268435455
+        maxTopicAlias: 65535
+        maxQoS: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-source
+  labels:
+    app: mqtt-source
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt-source
+  template:
+    metadata:
+      labels:
+        app: mqtt-source
+    spec:
+      containers:
+        - name: volantmq
+          image: docker.io/volantmq/volantmq:v0.4.0-rc.8
+          imagePullPolicy: Never
+          env:
+            - name: VOLANTMQ_CONFIG
+              value: /etc/volantmq/volantmq.yaml
+          ports:
+            - containerPort: 1883
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/volantmq
+      volumes:
+        - name: config
+          configMap:
+            name: volantmq-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-source
+spec:
+  selector:
+    app: mqtt-source
+  ports:
+    - port: 1883
+      targetPort: 1883
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-target
+  labels:
+    app: mqtt-target
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt-target
+  template:
+    metadata:
+      labels:
+        app: mqtt-target
+    spec:
+      containers:
+        - name: volantmq
+          image: docker.io/volantmq/volantmq:v0.4.0-rc.8
+          imagePullPolicy: Never
+          env:
+            - name: VOLANTMQ_CONFIG
+              value: /etc/volantmq/volantmq.yaml
+          ports:
+            - containerPort: 1883
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/volantmq
+      volumes:
+        - name: config
+          configMap:
+            name: volantmq-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-target
+spec:
+  selector:
+    app: mqtt-target
+  ports:
+    - port: 1883
+      targetPort: 1883
+      protocol: TCP
