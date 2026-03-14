@@ -44,10 +44,10 @@ mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkle
 10. **Multi-tenant isolation** — Mirror specific topic trees from a shared broker to tenant-specific brokers.
 
 ### 1.0 (GA) roadmap
-- [ ] Helm chart liveness probe
+- [x] Helm chart liveness probe
 - [x] Integration test
 - [ ] Stress test
-- [ ] Expose Prometheus metrics
+- [x] Expose Prometheus metrics
 
 ## Get started
 
