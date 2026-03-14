@@ -30,7 +30,20 @@ Use topic filters to prevent mirroring of unecessary messages.
 
 mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkles:
 
-### 1.0 (GA) roadmap 
+## Common use cases
+
+1. **Prod to staging** — Shadow production traffic into staging to validate new service versions against real messages before deploying.
+2. **Prod to dev** — Feed developers realistic data without simulating devices or writing mock generators.
+3. **Load/stress testing** — Mirror production traffic to a test cluster to benchmark how new infrastructure handles real load profiles.
+4. **Regression testing** — Route live traffic through a candidate build to catch issues that synthetic test data might miss.
+5. **Broker migration** — When switching brokers (e.g., Mosquitto to EMQX, or self-hosted to managed), mirror traffic to the new broker during transition to validate it before cutting over.
+6. **Cloud migration** — Run on-prem and cloud brokers in parallel with mirrored traffic to build confidence before migrating.
+7. **Cross-region replication** — Replicate data from an edge/regional broker to a central cloud broker for geographic redundancy.
+8. **Disaster recovery** — Maintain a hot standby broker with live data so failover is seamless.
+9. **Edge-to-cloud bridging** — Lightweight one-way replication from edge brokers to cloud, without full broker bridging.
+10. **Multi-tenant isolation** — Mirror specific topic trees from a shared broker to tenant-specific brokers.
+
+### 1.0 (GA) roadmap
 - [ ] Helm chart liveness probe
 - [x] Integration test
 - [ ] Stress test
