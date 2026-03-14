@@ -56,7 +56,7 @@ func Mirror(
 ) (func(), error) {
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
-	defer logger.Sync() // flushes buf
+	defer func() { _ = logger.Sync() }() // flushes buf
 
 	done := make(chan struct{})
 	if timeout > 0 {

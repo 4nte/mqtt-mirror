@@ -200,7 +200,7 @@ func waitForTCP(t *testing.T, addr string, timeout time.Duration) {
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, time.Second)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -256,7 +256,7 @@ func TestMirror_reconnect(t *testing.T) {
 	ctx := context.Background()
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	require.NoError(t, err, "failed to create docker client")
-	defer dockerClient.Close()
+	defer func() { _ = dockerClient.Close() }()
 
 	containerID := sourceBroker.container.GetContainerID()
 	stopTimeout := 5
