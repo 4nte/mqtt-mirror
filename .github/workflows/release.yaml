@@ -24,6 +24,15 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - name: Verify release notes exist
+      run: |
+        NOTES="changelog/${{ steps.get_version.outputs.version }}.md"
+        if [ ! -f "$NOTES" ]; then
+          echo "::error::Release notes not found: $NOTES"
+          echo "Create $NOTES before tagging a release."
+          exit 1
+        fi
+
     - name: Docker Login
       if: success() && startsWith(github.ref, 'refs/tags/')
       env:
