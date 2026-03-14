@@ -14,6 +14,7 @@ func NewClient(
 	password string,
 	isSource bool,
 	clientName string,
+	cleanSession bool,
 	onConnctHandler func(paho.Client),
 	onConnectionLostHandler func(paho.Client, error),
 ) (paho.Client, error) {
@@ -35,7 +36,8 @@ func NewClient(
 		SetMaxReconnectInterval(15 * time.Second).
 		SetUsername(username).
 		SetPassword(password).
-		SetClientID(id)
+		SetClientID(id).
+		SetCleanSession(cleanSession)
 
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
 		zap.L().

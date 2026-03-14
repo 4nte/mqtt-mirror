@@ -176,7 +176,12 @@ var rootCmd = &cobra.Command{
 		health := internal.NewHealthServer()
 		health.Start(healthPort, reg)
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, health, metrics)
+		cleanSession := viper.GetBool("clean_session")
+		if !cleanSession && len(viper.GetString("name")) == 0 {
+			fmt.Println("WARNING: --clean-session=false requires a stable client ID. Set --name to avoid session loss across restarts.")
+		}
+
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics)
 		if err != nil {
 			return fmt.Errorf("mirror failed: %w", err)
 		}
@@ -200,6 +205,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&instanceName, "name", "", "", "mqtt-mirror instance name. If not specified, will be randomly generated")
 	rootCmd.PersistentFlags().Int("health-port", 8080, "port for health check HTTP server")
+	rootCmd.PersistentFlags().Bool("clean-session", true, "set MQTT clean session flag (use false for persistent sessions)")
 
 	rootCmd.PersistentFlags().StringVar(&targetURI, "config", "", "config file")
 
@@ -221,6 +227,9 @@ func init() {
 		panic(err)
 	}
 	if err = viper.BindPFlag("health_port", rootCmd.PersistentFlags().Lookup("health-port")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("clean_session", rootCmd.PersistentFlags().Lookup("clean-session")); err != nil {
 		panic(err)
 	}
 }

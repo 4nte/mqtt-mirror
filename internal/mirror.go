@@ -76,6 +76,7 @@ func Mirror(
 	verbose bool,
 	timeout time.Duration,
 	instanceName string,
+	cleanSession bool,
 	health *HealthServer,
 	metrics *Metrics,
 ) (func(), error) {
@@ -106,6 +107,7 @@ func Mirror(
 		targetPassword,
 		false,
 		instanceName,
+		true,
 		func(c mqtt2.Client) {
 			if metrics != nil {
 				metrics.TargetConnected.Set(1)
@@ -156,6 +158,7 @@ func Mirror(
 		sourcePassword,
 		true,
 		instanceName,
+		cleanSession,
 		func(c mqtt2.Client) {
 			if metrics != nil {
 				metrics.SourceConnected.Set(1)

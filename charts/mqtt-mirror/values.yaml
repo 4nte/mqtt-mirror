@@ -18,6 +18,7 @@ mqtt:
   source: ""
   target: ""
   topic_filter: [] # all topics
+  clean_session: true # set to false for persistent sessions
   # Use an existing secret containing SOURCE and TARGET keys
   # existingSecret: ""
 

@@ -60,6 +60,10 @@ spec:
             - name: NAME
               value: "{{ .Values.name }}"
             {{- end }}
+            {{- if not .Values.mqtt.clean_session }}
+            - name: CLEAN_SESSION
+              value: "false"
+            {{- end }}
             - name: HEALTH_PORT
               value: "{{ .Values.health.port }}"
             {{- with .Values.extraEnvVars }}

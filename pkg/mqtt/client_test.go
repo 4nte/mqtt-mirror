@@ -7,7 +7,7 @@ import (
 
 func TestNewClient_NameTooLong(t *testing.T) {
 	name := strings.Repeat("a", 11)
-	_, err := NewClient("tcp://localhost:1883", "", "", false, name, nil, nil)
+	_, err := NewClient("tcp://localhost:1883", "", "", false, name, true, nil, nil)
 	if err == nil {
 		t.Fatal("expected error for 11-char name, got nil")
 	}
@@ -19,7 +19,7 @@ func TestNewClient_NameTooLong(t *testing.T) {
 func TestNewClient_NameBoundary(t *testing.T) {
 	name := strings.Repeat("a", 10)
 	// 10-char name should pass validation but fail on connect (no broker running)
-	_, err := NewClient("tcp://localhost:19999", "", "", false, name, nil, nil)
+	_, err := NewClient("tcp://localhost:19999", "", "", false, name, true, nil, nil)
 	if err == nil {
 		return // unlikely but acceptable
 	}
