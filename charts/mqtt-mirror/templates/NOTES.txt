@@ -1,1 +1,18 @@
-todo
+mqtt-mirror has been deployed.
+
+Release: {{ .Release.Name }}
+Source:  {{ .Values.mqtt.source | default "(from existing secret)" }}
+Target:  {{ .Values.mqtt.target | default "(from existing secret)" }}
+
+Check pod status:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+View logs:
+  kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} -f
+
+Verify the mirror is working by publishing a message to the source broker
+and checking that it appears on the target broker.
+{{- if .Values.serviceMonitor.enabled }}
+
+Prometheus ServiceMonitor is enabled. Metrics are scraped from port {{ .Values.health.port }} at /metrics.
+{{- end }}

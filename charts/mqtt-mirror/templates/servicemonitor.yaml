@@ -1,0 +1,23 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "mqtt-mirror.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
+    helm.sh/chart: {{ include "mqtt-mirror.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+    - port: health
+      interval: {{ .Values.serviceMonitor.interval }}
+      path: /metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

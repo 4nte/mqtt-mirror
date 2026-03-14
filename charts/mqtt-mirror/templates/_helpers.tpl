@@ -30,3 +30,22 @@ Create chart name and version as used by the chart label.
 {{- define "mqtt-mirror.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Join a list with commas.
+*/}}
+{{- define "mqtt-mirror.joinListWithComma" -}}
+{{- $local := dict "first" true -}}
+{{- range $k, $v := . -}}{{- if not $local.first -}},{{- end -}}{{- $v -}}{{- $_ := set $local "first" false -}}{{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret name for broker credentials.
+*/}}
+{{- define "mqtt-mirror.secretName" -}}
+{{- if .Values.mqtt.existingSecret -}}
+{{- .Values.mqtt.existingSecret -}}
+{{- else -}}
+{{- include "mqtt-mirror.fullname" . -}}
+{{- end -}}
+{{- end -}}

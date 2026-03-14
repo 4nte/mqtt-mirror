@@ -6,8 +6,10 @@ replicaCount: 1
 
 image:
   repository: antegulin/mqtt-mirror
-  tag: 0.1.0
+  tag: "" # defaults to .Chart.AppVersion
   pullPolicy: IfNotPresent
+
+imagePullSecrets: []
 
 verbose: false
 name: "" # name of the mqtt-mirror instance (used as clientID)
@@ -16,12 +18,41 @@ mqtt:
   source: ""
   target: ""
   topic_filter: [] # all topics
+  # Use an existing secret containing SOURCE and TARGET keys
+  # existingSecret: ""
 
 health:
   port: 8080
 
 nameOverride: ""
 fullnameOverride: ""
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  fsGroup: 65534
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+podAnnotations: {}
+
+extraEnvVars: []
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  # labels: {}
 
 nodeSelector: {}
 

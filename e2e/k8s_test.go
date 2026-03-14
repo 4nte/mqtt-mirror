@@ -53,11 +53,11 @@ func TestHelmTemplate_RendersValidManifests(t *testing.T) {
 
 	missing := containsAll(manifest,
 		"kind: Deployment",
+		"kind: Secret",
 		"/healthz",
 		"/readyz",
 		"containerPort: 8080",
-		"tcp://mqtt-source:1883",
-		"tcp://mqtt-target:1883",
+		"secretKeyRef",
 	)
 	require.Empty(t, missing, "rendered manifest missing expected strings: %v", missing)
 }
