@@ -1,3 +1,5 @@
+version: 2
+
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 before:
@@ -79,7 +81,7 @@ dockers:
 
 brews:
 - # Github repository to push the tap to.
-  tap:
+  repository:
     owner: 4nte
     name: homebrew-tap
 

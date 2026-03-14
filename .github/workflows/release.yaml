@@ -40,7 +40,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v6
       with:
         version: "~> v2"
-        args: release
+        args: release --release-notes=RELEASE_NOTES.md
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
 
