@@ -1,0 +1,22 @@
+{
+  "name": "mqtt-mirror",
+  "version": "0.0.0",
+  "description": "Replicate MQTT traffic from one broker to another",
+  "license": "MIT",
+  "bin": {
+    "mqtt-mirror": "bin/mqtt-mirror"
+  },
+  "files": ["bin/mqtt-mirror"],
+  "optionalDependencies": {
+    "@mqtt-mirror/linux-x64": "0.0.0",
+    "@mqtt-mirror/linux-arm64": "0.0.0",
+    "@mqtt-mirror/darwin-x64": "0.0.0",
+    "@mqtt-mirror/darwin-arm64": "0.0.0",
+    "@mqtt-mirror/win32-x64": "0.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/4nte/mqtt-mirror"
+  },
+  "keywords": ["mqtt", "mirror", "broker", "replication"]
+}

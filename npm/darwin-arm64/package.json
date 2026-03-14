@@ -1,0 +1,10 @@
+{
+  "name": "@mqtt-mirror/darwin-arm64",
+  "version": "0.0.0",
+  "description": "mqtt-mirror native binary for macOS arm64",
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "files": ["mqtt-mirror"],
+  "license": "MIT",
+  "preferUnplugged": true
+}

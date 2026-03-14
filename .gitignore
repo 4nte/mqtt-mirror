@@ -12,5 +12,5 @@
 
 nyan
 dist/
-mqtt-mirror
+/mqtt-mirror
 bin/

@@ -38,6 +38,18 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        registry-url: "https://registry.npmjs.org"
+
+    - name: Publish npm packages
+      run: npm/publish.sh
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        VERSION: ${{ steps.get_version.outputs.version-without-v }}
+
     - name: Publish helm chart
       uses: stefanprodan/helm-gh-pages@v1.4.1
       with:
