@@ -20,6 +20,9 @@ vet:
 test:
 	go test ./... -covermode=count -coverprofile=profile.cov
 
+test-e2e:
+	go test -tags=e2e ./e2e/ -v -timeout 10m -count=1
+
 docker-image:
 	docker build -t ${USER}/mqtt-mirror:latest -f build/Dockerfile .
 

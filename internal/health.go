@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -42,7 +44,8 @@ func (h *HealthServer) IsReady() bool {
 }
 
 // Start begins serving health check endpoints on the given port.
-func (h *HealthServer) Start(port int) {
+// If reg is non-nil, a /metrics endpoint is registered for Prometheus scraping.
+func (h *HealthServer) Start(port int, reg *prometheus.Registry) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -57,6 +60,10 @@ func (h *HealthServer) Start(port int) {
 			_, _ = fmt.Fprintln(w, "not ready")
 		}
 	})
+
+	if reg != nil {
+		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	}
 
 	h.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),

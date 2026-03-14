@@ -15,6 +15,7 @@ func NewClient(
 	isSource bool,
 	clientName string,
 	onConnctHandler func(paho.Client),
+	onConnectionLostHandler func(paho.Client, error),
 ) (paho.Client, error) {
 	var role string
 	if isSource {
@@ -41,8 +42,11 @@ func NewClient(
 			Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
 		onConnctHandler(client)
 	})
-	clientOpts.SetConnectionLostHandler(func(i paho.Client, error error) {
+	clientOpts.SetConnectionLostHandler(func(client paho.Client, err error) {
 		zap.L().Warn("connection lost", zap.String("broker_uri", broker), zap.String("role", role))
+		if onConnectionLostHandler != nil {
+			onConnectionLostHandler(client, err)
+		}
 	})
 
 	client := paho.NewClient(clientOpts)

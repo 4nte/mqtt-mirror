@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"net/url"
 	"time"
 
@@ -10,26 +11,48 @@ import (
 	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 )
 
-func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool) mqtt2.MessageHandler {
-	if verbose {
-		return func(client mqtt2.Client, message mqtt2.Message) {
-			topic := message.Topic()
-			payload := message.Payload()
-			qos := message.Qos()
-			retained := message.Retained()
-			zap.L().
-				Info("message replicated", zap.Int("bytes_len", len(payload)), zap.String("topic", topic), zap.Int("QoS", int(qos)), zap.Bool("retained", retained))
-			targetClient.Publish(
-				message.Topic(),
-				message.Qos(),
-				message.Retained(),
-				message.Payload(),
-			)
-		}
-	}
-
+func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics *Metrics) mqtt2.MessageHandler {
 	return func(client mqtt2.Client, message mqtt2.Message) {
-		targetClient.Publish(message.Topic(), message.Qos(), message.Retained(), message.Payload())
+		topic := message.Topic()
+		payload := message.Payload()
+		qos := message.Qos()
+		retained := message.Retained()
+		qosStr := fmt.Sprintf("%d", qos)
+
+		if metrics != nil {
+			metrics.MessagesReceived.WithLabelValues(qosStr).Inc()
+			metrics.MessageSize.Observe(float64(len(payload)))
+		}
+
+		if verbose {
+			zap.L().Info("message replicated",
+				zap.Int("bytes_len", len(payload)),
+				zap.String("topic", topic),
+				zap.Int("QoS", int(qos)),
+				zap.Bool("retained", retained))
+		}
+
+		start := time.Now()
+		token := targetClient.Publish(topic, qos, retained, payload)
+		ok := token.WaitTimeout(10 * time.Second)
+		elapsed := time.Since(start).Seconds()
+
+		if metrics != nil {
+			metrics.PublishDuration.Observe(elapsed)
+		}
+
+		if !ok || token.Error() != nil {
+			if metrics != nil {
+				metrics.PublishErrors.Inc()
+			}
+			if token.Error() != nil {
+				zap.L().Error("publish failed", zap.String("topic", topic), zap.Error(token.Error()))
+			} else {
+				zap.L().Error("publish timed out", zap.String("topic", topic))
+			}
+		} else if metrics != nil {
+			metrics.MessagesPublished.WithLabelValues(qosStr).Inc()
+		}
 	}
 }
 
@@ -54,6 +77,7 @@ func Mirror(
 	timeout time.Duration,
 	instanceName string,
 	health *HealthServer,
+	metrics *Metrics,
 ) (func(), error) {
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
@@ -82,14 +106,23 @@ func Mirror(
 		targetPassword,
 		false,
 		instanceName,
-		func(c mqtt2.Client) {},
+		func(c mqtt2.Client) {
+			if metrics != nil {
+				metrics.TargetConnected.Set(1)
+			}
+		},
+		func(c mqtt2.Client, err error) {
+			if metrics != nil {
+				metrics.TargetConnected.Set(0)
+			}
+		},
 	)
 	if err != nil {
 		return func() {}, err
 	}
 
 	qos := byte(0)
-	messageHandler := createSourceMessageHandler(targetClient, verbose)
+	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics)
 	onConnHandler := func(client mqtt2.Client) {
 		if len(topics) == 0 {
 			// Subscribe to all
@@ -123,7 +156,17 @@ func Mirror(
 		sourcePassword,
 		true,
 		instanceName,
-		onConnHandler,
+		func(c mqtt2.Client) {
+			if metrics != nil {
+				metrics.SourceConnected.Set(1)
+			}
+			onConnHandler(c)
+		},
+		func(c mqtt2.Client, err error) {
+			if metrics != nil {
+				metrics.SourceConnected.Set(0)
+			}
+		},
 	)
 	if err != nil {
 		return func() {}, err

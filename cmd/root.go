@@ -14,6 +14,8 @@ import (
 
 	"github.com/4nte/mqtt-mirror/internal"
 	"github.com/dchest/uniuri"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,8 +26,8 @@ var ( // Flags
 	cfgFile string
 	Verbose bool
 
-	sourceURI  string
-	targetURI  string
+	sourceURI string
+	targetURI string
 
 	instanceName string
 
@@ -93,7 +95,7 @@ var rootCmd = &cobra.Command{
 	Use:     "mqtt-mirror source target",
 	Version: version,
 	Short:   "lightweight traffic shadowing tool",
-	Long:  `lightweight traffic shadowing tool purposely built to replicate traffic from one broker to another.`,
+	Long:    `lightweight traffic shadowing tool purposely built to replicate traffic from one broker to another.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		var source, target string
 
@@ -165,11 +167,16 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse target URI: %w", err)
 		}
 
+		reg := prometheus.NewRegistry()
+		reg.MustRegister(collectors.NewGoCollector())
+		reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		metrics := internal.NewMetrics(reg, version)
+
 		healthPort := viper.GetInt("health_port")
 		health := internal.NewHealthServer()
-		health.Start(healthPort)
+		health.Start(healthPort, reg)
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, health)
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, health, metrics)
 		if err != nil {
 			return fmt.Errorf("mirror failed: %w", err)
 		}

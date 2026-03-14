@@ -143,7 +143,7 @@ func TestMirror_withAuth(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", nil, nil)
 	require.NoError(t, err)
 
 	mutex := sync.Mutex{}
@@ -227,7 +227,7 @@ func TestMirror_reconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", nil, nil)
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -350,7 +350,7 @@ func setupMirror(t *testing.T, topics []string) (MqttBroker, MqttBroker, func())
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", nil, nil)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -627,7 +627,7 @@ func TestMirror_TargetBrokerReconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", nil, nil)
 	require.NoError(t, err)
 	defer terminateMirror()
 
