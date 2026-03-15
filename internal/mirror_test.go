@@ -143,7 +143,7 @@ func TestMirror_withAuth(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{})
 	require.NoError(t, err)
 
 	mutex := sync.Mutex{}
@@ -227,7 +227,7 @@ func TestMirror_reconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{})
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -337,7 +337,7 @@ const testPassword = "testpassword"
 
 // setupMirror creates two auth brokers and starts a mirror between them.
 // Returns the brokers, a terminate function, and a cleanup function.
-func setupMirror(t *testing.T, topics []string) (MqttBroker, MqttBroker, func()) {
+func setupMirror(t *testing.T, topics []string, rewrite ...TopicRewriteConfig) (MqttBroker, MqttBroker, func()) {
 	t.Helper()
 	sourceBroker, err := NewMQTTContainer(true)
 	require.NoError(t, err, "failed to start source broker")
@@ -350,7 +350,12 @@ func setupMirror(t *testing.T, topics []string) (MqttBroker, MqttBroker, func())
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, nil)
+	var rw TopicRewriteConfig
+	if len(rewrite) > 0 {
+		rw = rewrite[0]
+	}
+
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, nil, rw)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -627,7 +632,7 @@ func TestMirror_TargetBrokerReconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", true, nil, nil)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", true, nil, nil, TopicRewriteConfig{})
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -781,4 +786,85 @@ func TestMirror_GracefulShutdown(t *testing.T) {
 	mu.Lock()
 	require.Equal(t, countAfterShutdown, len(messages), "no new messages should arrive after terminate()")
 	mu.Unlock()
+}
+
+func TestMirror_TopicRewrite(t *testing.T) {
+	t.Run("prefix", func(t *testing.T) {
+		sourceBroker, destinationBroker, _ := setupMirror(t, nil, TopicRewriteConfig{
+			Prefix: "site-a/",
+		})
+
+		mu := sync.Mutex{}
+		var messages []paho.Message
+		destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-rw-p")
+		token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+			mu.Lock()
+			defer mu.Unlock()
+			messages = append(messages, msg)
+		})
+		token.Wait()
+
+		srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-rw-p")
+		token = srcClient.Publish("sensors/temp", byte(0), false, []byte("data"))
+		token.Wait()
+
+		waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+		mu.Lock()
+		require.Equal(t, "site-a/sensors/temp", messages[0].Topic())
+		mu.Unlock()
+	})
+
+	t.Run("replace", func(t *testing.T) {
+		sourceBroker, destinationBroker, _ := setupMirror(t, nil, TopicRewriteConfig{
+			Replacements: []TopicReplacement{{Old: "legacy/", New: ""}},
+		})
+
+		mu := sync.Mutex{}
+		var messages []paho.Message
+		destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-rw-r")
+		token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+			mu.Lock()
+			defer mu.Unlock()
+			messages = append(messages, msg)
+		})
+		token.Wait()
+
+		srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-rw-r")
+		token = srcClient.Publish("legacy/sensors/temp", byte(0), false, []byte("data"))
+		token.Wait()
+
+		waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+		mu.Lock()
+		require.Equal(t, "sensors/temp", messages[0].Topic())
+		mu.Unlock()
+	})
+
+	t.Run("replace and prefix", func(t *testing.T) {
+		sourceBroker, destinationBroker, _ := setupMirror(t, nil, TopicRewriteConfig{
+			Replacements: []TopicReplacement{{Old: "legacy/", New: ""}},
+			Prefix:       "site-a/",
+		})
+
+		mu := sync.Mutex{}
+		var messages []paho.Message
+		destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-rw-rp")
+		token := destClient.Subscribe("#", byte(0), func(client paho.Client, msg paho.Message) {
+			mu.Lock()
+			defer mu.Unlock()
+			messages = append(messages, msg)
+		})
+		token.Wait()
+
+		srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-rw-rp")
+		token = srcClient.Publish("legacy/sensors/temp", byte(0), false, []byte("data"))
+		token.Wait()
+
+		waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+		mu.Lock()
+		require.Equal(t, "site-a/sensors/temp", messages[0].Topic())
+		mu.Unlock()
+	})
 }

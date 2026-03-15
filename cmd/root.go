@@ -181,7 +181,19 @@ var rootCmd = &cobra.Command{
 			fmt.Println("WARNING: --clean-session=false requires a stable client ID. Set --name to avoid session loss across restarts.")
 		}
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics)
+		// Build topic rewrite config
+		rewriteConfig := internal.TopicRewriteConfig{
+			Prefix: viper.GetString("topic_prefix"),
+		}
+		for _, raw := range viper.GetStringSlice("topic_replace") {
+			r, err := internal.ParseTopicReplace(raw)
+			if err != nil {
+				return fmt.Errorf("invalid --topic-replace value: %w", err)
+			}
+			rewriteConfig.Replacements = append(rewriteConfig.Replacements, r)
+		}
+
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig)
 		if err != nil {
 			return fmt.Errorf("mirror failed: %w", err)
 		}
@@ -207,6 +219,9 @@ func init() {
 	rootCmd.PersistentFlags().Int("health-port", 8080, "port for health check HTTP server")
 	rootCmd.PersistentFlags().Bool("clean-session", true, "set MQTT clean session flag (use false for persistent sessions)")
 
+	rootCmd.PersistentFlags().String("topic-prefix", "", "prefix to prepend to all mirrored topics")
+	rootCmd.PersistentFlags().StringSlice("topic-replace", []string{}, "topic replacement in old:new format (repeatable)")
+
 	rootCmd.PersistentFlags().StringVar(&targetURI, "config", "", "config file")
 
 	err := viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
@@ -230,6 +245,12 @@ func init() {
 		panic(err)
 	}
 	if err = viper.BindPFlag("clean_session", rootCmd.PersistentFlags().Lookup("clean-session")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("topic_prefix", rootCmd.PersistentFlags().Lookup("topic-prefix")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("topic_replace", rootCmd.PersistentFlags().Lookup("topic-replace")); err != nil {
 		panic(err)
 	}
 }

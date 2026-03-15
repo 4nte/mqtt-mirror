@@ -64,6 +64,14 @@ spec:
             - name: CLEAN_SESSION
               value: "false"
             {{- end }}
+            {{- if .Values.mqtt.topic_prefix }}
+            - name: TOPIC_PREFIX
+              value: "{{ .Values.mqtt.topic_prefix }}"
+            {{- end }}
+            {{- if .Values.mqtt.topic_replace }}
+            - name: TOPIC_REPLACE
+              value: "{{ include "mqtt-mirror.joinListWithComma" .Values.mqtt.topic_replace }}"
+            {{- end }}
             - name: HEALTH_PORT
               value: "{{ .Values.health.port }}"
             {{- with .Values.extraEnvVars }}

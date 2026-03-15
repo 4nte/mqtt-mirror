@@ -11,7 +11,7 @@ import (
 	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 )
 
-func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics *Metrics) mqtt2.MessageHandler {
+func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics *Metrics, rewrite TopicRewriteConfig) mqtt2.MessageHandler {
 	return func(client mqtt2.Client, message mqtt2.Message) {
 		topic := message.Topic()
 		payload := message.Payload()
@@ -24,16 +24,23 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics
 			metrics.MessageSize.Observe(float64(len(payload)))
 		}
 
+		publishTopic := TransformTopic(topic, rewrite)
+
 		if verbose {
-			zap.L().Info("message replicated",
+			fields := []zap.Field{
 				zap.Int("bytes_len", len(payload)),
 				zap.String("topic", topic),
 				zap.Int("QoS", int(qos)),
-				zap.Bool("retained", retained))
+				zap.Bool("retained", retained),
+			}
+			if publishTopic != topic {
+				fields = append(fields, zap.String("rewritten_topic", publishTopic))
+			}
+			zap.L().Info("message replicated", fields...)
 		}
 
 		start := time.Now()
-		token := targetClient.Publish(topic, qos, retained, payload)
+		token := targetClient.Publish(publishTopic, qos, retained, payload)
 		ok := token.WaitTimeout(10 * time.Second)
 		elapsed := time.Since(start).Seconds()
 
@@ -79,6 +86,7 @@ func Mirror(
 	cleanSession bool,
 	health *HealthServer,
 	metrics *Metrics,
+	rewrite TopicRewriteConfig,
 ) (func(), error) {
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
@@ -124,7 +132,7 @@ func Mirror(
 	}
 
 	qos := byte(0)
-	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics)
+	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics, rewrite)
 	onConnHandler := func(client mqtt2.Client) {
 		if len(topics) == 0 {
 			// Subscribe to all

@@ -19,6 +19,8 @@ mqtt:
   target: ""
   topic_filter: [] # all topics
   clean_session: true # set to false for persistent sessions
+  topic_prefix: "" # prefix to prepend to all mirrored topics
+  topic_replace: [] # topic replacements in old:new format
   # Use an existing secret containing SOURCE and TARGET keys
   # existingSecret: ""
 
