@@ -145,7 +145,7 @@ func TestMirror_withAuth(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{}, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{}, 0, byte(0))
 	require.NoError(t, err)
 
 	mutex := sync.Mutex{}
@@ -232,7 +232,7 @@ func TestMirror_reconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", username, password, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{}, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, true, 0, "", true, nil, nil, TopicRewriteConfig{}, 0, byte(0))
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -360,7 +360,7 @@ func setupMirror(t *testing.T, topics []string, rewrite ...TopicRewriteConfig) (
 		rw = rewrite[0]
 	}
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, nil, rw, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, nil, rw, 0, byte(0))
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -398,7 +398,7 @@ func setupMirrorWithMetrics(t *testing.T, topics []string, rewrite ...TopicRewri
 	reg := prometheus.NewRegistry()
 	m := NewMetrics(reg, "test")
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, m, rw, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, topics, false, 0, "test", true, nil, m, rw, 0, byte(0))
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -675,7 +675,7 @@ func TestMirror_TargetBrokerReconnect(t *testing.T) {
 	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
 	require.NoError(t, err)
 
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", true, nil, nil, TopicRewriteConfig{}, 0)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test", true, nil, nil, TopicRewriteConfig{}, 0, byte(0))
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -967,7 +967,7 @@ func TestMirror_MessagesDuringTargetOutage(t *testing.T) {
 	m := NewMetrics(reg, "test")
 
 	// Use short publish timeout to avoid long waits during outage
-	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test-outage", true, nil, m, TopicRewriteConfig{}, 2*time.Second)
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test-outage", true, nil, m, TopicRewriteConfig{}, 2*time.Second, byte(0))
 	require.NoError(t, err)
 	defer terminateMirror()
 
@@ -1071,6 +1071,53 @@ func TestMirror_MessagesDuringTargetOutage(t *testing.T) {
 				"message published during outage should have been dropped, not queued")
 		}
 	}
+	mu.Unlock()
+}
+
+func TestMirror_SubscribeQoS(t *testing.T) {
+	sourceBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start source broker")
+	defer sourceBroker.Terminate()
+
+	destinationBroker, err := NewMQTTContainer(true)
+	require.NoError(t, err, "failed to start destination broker")
+	defer destinationBroker.Terminate()
+
+	sourceURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, sourceBroker.HostIP, sourceBroker.HostPort))
+	require.NoError(t, err)
+	destinationURL, err := url.Parse(fmt.Sprintf("tcp://%s:%s@%s:%s", testUsername, testPassword, destinationBroker.HostIP, destinationBroker.HostPort))
+	require.NoError(t, err)
+
+	// Start mirror with subscribe QoS 1
+	terminateMirror, err := Mirror(*sourceURL, *destinationURL, []string{}, false, 0, "test-subqos", true, nil, nil, TopicRewriteConfig{}, 0, byte(1))
+	require.NoError(t, err)
+	defer terminateMirror()
+
+	time.Sleep(1 * time.Second)
+
+	mu := sync.Mutex{}
+	var messages []paho.Message
+	destClient := NewClient(t, destinationBroker.Uri(), testUsername, testPassword, "dest-subqos")
+	token := destClient.Subscribe("#", byte(2), func(client paho.Client, msg paho.Message) {
+		mu.Lock()
+		defer mu.Unlock()
+		messages = append(messages, msg)
+	})
+	token.Wait()
+
+	srcClient := NewClient(t, sourceBroker.Uri(), testUsername, testPassword, "src-subqos")
+
+	// Publish at QoS 1 — the mirror subscribes at QoS 1, so it should
+	// receive and forward the message preserving the original publish QoS.
+	token = srcClient.Publish("subqos/test", byte(1), false, []byte("qos1-msg"))
+	token.Wait()
+
+	waitForMessages(t, &mu, &messages, 1, 5*time.Second)
+
+	mu.Lock()
+	require.Equal(t, byte(1), messages[0].Qos(), "expected QoS 1 on destination")
+	require.Equal(t, "subqos/test", messages[0].Topic())
+	require.Equal(t, "qos1-msg", string(messages[0].Payload()))
 	mu.Unlock()
 }
 

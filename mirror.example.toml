@@ -31,3 +31,7 @@ topic_replace = ["staging:production", "v1:v2"]
 
 # Timeout for publishing messages to the target broker
 publish_timeout = "10s"
+
+# QoS level for subscribing to the source broker (0, 1, or 2)
+# Higher QoS enables broker-side message queuing with clean_session=false
+subscribe_qos = 0

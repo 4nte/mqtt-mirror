@@ -88,6 +88,7 @@ func Mirror(
 	metrics *Metrics,
 	rewrite TopicRewriteConfig,
 	publishTimeout time.Duration,
+	subscribeQos byte,
 ) (func(), error) {
 	if publishTimeout <= 0 {
 		publishTimeout = 10 * time.Second
@@ -149,7 +150,7 @@ func Mirror(
 		return func() {}, err
 	}
 
-	qos := byte(0)
+	qos := subscribeQos
 	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics, rewrite, publishTimeout)
 	onConnHandler := func(client mqtt2.Client) {
 		if len(topics) == 0 {

@@ -198,7 +198,13 @@ var rootCmd = &cobra.Command{
 		}
 
 		publishTimeout := viper.GetDuration("publish_timeout")
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig, publishTimeout)
+
+		subscribeQos := byte(viper.GetInt("subscribe_qos"))
+		if subscribeQos > 2 {
+			return fmt.Errorf("subscribe-qos must be 0, 1, or 2")
+		}
+
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig, publishTimeout, subscribeQos)
 		if err != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -230,6 +236,7 @@ func init() {
 	rootCmd.PersistentFlags().String("topic-prefix", "", "prefix to prepend to all mirrored topics")
 	rootCmd.PersistentFlags().StringSlice("topic-replace", []string{}, "topic replacement in old:new format (repeatable)")
 	rootCmd.PersistentFlags().Duration("publish-timeout", 10*time.Second, "timeout for publishing messages to the target broker")
+	rootCmd.PersistentFlags().Int("subscribe-qos", 0, "QoS level for source broker subscription (0, 1, or 2)")
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
 
@@ -263,6 +270,9 @@ func init() {
 		panic(err)
 	}
 	if err = viper.BindPFlag("publish_timeout", rootCmd.PersistentFlags().Lookup("publish-timeout")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("subscribe_qos", rootCmd.PersistentFlags().Lookup("subscribe-qos")); err != nil {
 		panic(err)
 	}
 }
