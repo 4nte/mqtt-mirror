@@ -3,24 +3,28 @@ kind: Deployment
 metadata:
   name: {{ include "mqtt-mirror.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
-    helm.sh/chart: {{ include "mqtt-mirror.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "mqtt-mirror.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.mqtt.clean_session }}
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "mqtt-mirror.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
-      {{- with .Values.podAnnotations }}
+        {{- include "mqtt-mirror.selectorLabels" . | nindent 8 }}
+      {{- if or .Values.podAnnotations .Values.configFile }}
       annotations:
+        {{- if .Values.configFile }}
+        checksum/config: {{ .Values.configFile | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -39,6 +43,9 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.configFile }}
+          args: ["--config", "/etc/mqtt-mirror/mirror.toml"]
+          {{- end }}
           env:
             - name: SOURCE
               valueFrom:
@@ -50,8 +57,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "mqtt-mirror.secretName" . }}
                   key: TARGET
+            {{- if .Values.mqtt.topic_filter }}
             - name: TOPIC_FILTER
               value: "{{ include "mqtt-mirror.joinListWithComma" .Values.mqtt.topic_filter }}"
+            {{- end }}
             {{- if .Values.verbose }}
             - name: VERBOSE
               value: "{{ .Values.verbose }}"
@@ -95,8 +104,20 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
+          {{- if .Values.configFile }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mqtt-mirror
+              readOnly: true
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.configFile }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mqtt-mirror.fullname" . }}-config
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

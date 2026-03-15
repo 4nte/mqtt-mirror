@@ -4,10 +4,7 @@ kind: Service
 metadata:
   name: {{ include "mqtt-mirror.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
-    helm.sh/chart: {{ include "mqtt-mirror.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "mqtt-mirror.labels" . | nindent 4 }}
 spec:
   ports:
     - name: health
@@ -15,6 +12,5 @@ spec:
       targetPort: health
       protocol: TCP
   selector:
-    app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "mqtt-mirror.selectorLabels" . | nindent 4 }}
 {{- end }}

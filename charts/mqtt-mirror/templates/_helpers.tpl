@@ -40,6 +40,25 @@ Join a list with commas.
 {{- end -}}
 
 {{/*
+Common labels.
+*/}}
+{{- define "mqtt-mirror.labels" -}}
+app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
+helm.sh/chart: {{ include "mqtt-mirror.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end -}}
+
+{{/*
+Selector labels (stable subset for matchLabels).
+*/}}
+{{- define "mqtt-mirror.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "mqtt-mirror.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{/*
 Return the secret name for broker credentials.
 */}}
 {{- define "mqtt-mirror.secretName" -}}

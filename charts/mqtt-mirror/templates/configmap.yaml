@@ -1,0 +1,11 @@
+{{- if .Values.configFile }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mqtt-mirror.fullname" . }}-config
+  labels:
+    {{- include "mqtt-mirror.labels" . | nindent 4 }}
+data:
+  mirror.toml: |
+    {{- .Values.configFile | nindent 4 }}
+{{- end }}

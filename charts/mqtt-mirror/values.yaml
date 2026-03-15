@@ -52,6 +52,17 @@ podAnnotations: {}
 
 extraEnvVars: []
 
+# Optional: inline TOML config file (mounted as ConfigMap at /etc/mqtt-mirror/mirror.toml)
+# source and target are still read from the Secret; all other options can go here.
+# configFile: |
+#   verbose = true
+#   topic_filter = ["devices/#", "sensors/+/temperature"]
+#   name = "my-mirror"
+#   health_port = 9090
+#   clean_session = false
+#   topic_prefix = "mirror/"
+#   topic_replace = ["staging:production", "v1:v2"]
+
 serviceMonitor:
   enabled: false
   interval: 30s
