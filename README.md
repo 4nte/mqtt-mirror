@@ -14,18 +14,11 @@
 
 ---
 
-Mqtt-mirror subscribes to the _source broker_ and publishes replicated messages to the _target broker_.  
-Replicated messages preserve the original _QoS_ and _Retain_ message options.  
+Mqtt-mirror subscribes to a _source broker_ and publishes replicated messages to a _target broker_, preserving the original _QoS_ and _Retain_ flags.
 
-
-All topics are mirrored by default, you can cherry pick topics to be mirrored by specifying topic filters. Standard MQTT wildcards `+` and `#` are available, [see wildcard spec](https://mosquitto.org/man/mqtt-7.html).
+All topics are mirrored by default. Use topic filters to cherry-pick which topics to mirror — standard MQTT wildcards `+` and `#` are supported ([wildcard spec](https://mosquitto.org/man/mqtt-7.html)).
 
 ![Example usage](./img/demo.svg)
-
-Take in consideration that outbound traffic will increase by the amount of inbound traffic.  
-Use topic filters to prevent mirroring of unecessary messages.
-
-mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkles:
 
 ## Common use cases
 
@@ -40,25 +33,16 @@ mqtt-mirror is used in production at [spotsie.io](https://spotsie.io) ! :sparkle
 9. **Edge-to-cloud bridging** — Lightweight one-way replication from edge brokers to cloud, without full broker bridging.
 10. **Multi-tenant isolation** — Mirror specific topic trees from a shared broker to tenant-specific brokers.
 
-### 1.0 (GA) roadmap
-- [x] Helm chart liveness probe
-- [x] Integration test
-- [ ] Stress test
-- [x] Expose Prometheus metrics
+## Install
 
-## Get started
+Mqtt-mirror is available as a **standalone binary**, **Docker image**, **npm package**, and **Helm chart**.
 
-Mqtt-mirror is available as a **standalone binary**, **docker image**, **npm package** and **helm chart**.
-
-### Install
-
-**Docker** :whale:
+**Docker**
 ```
 docker run antegulin/mqtt-mirror ./mqtt-mirror \
-tcp://username:pass@source.xyz:1883 \
-tcp://target.xyz:1883 \
---topic_filter=events,sensors/+/temperature/+,logs# \
---verbose
+  tcp://username:pass@source.xyz:1883 \
+  tcp://target.xyz:1883 \
+  -t events,sensors/+/temperature/+,logs#
 ```
 
 **npx** (zero install)
@@ -66,46 +50,136 @@ tcp://target.xyz:1883 \
 npx mqtt-mirror \
   tcp://username:pass@source.xyz:1883 \
   tcp://target.xyz:1883 \
-  --topic_filter=events,sensors/+/temperature/+,logs#
+  -t events,sensors/+/temperature/+,logs#
 ```
 
-**Helm chart** :package:
+**Helm chart**
 ```
 helm repo add 4nte https://4nte.github.io/helm-charts/
 helm install mqtt-mirror 4nte/mqtt-mirror \
---set mqtt.source=$SOURCE_BROKER \
---set mqtt.target=$TARGET_BROKER \
---set mqtt.topic_filter=foo,bar,device/+/ping \
+  --set mqtt.source=$SOURCE_BROKER \
+  --set mqtt.target=$TARGET_BROKER \
+  --set mqtt.topic_filter=foo,bar,device/+/ping
 ```
 
-**Homebrew** :beer:
+**Homebrew**
 ```
 brew tap 4nte/homebrew-tap
 brew install mqtt-mirror
 ```
 
-**Shell script** :clipboard:
+**Shell script**
 ```
 curl -sfL https://raw.githubusercontent.com/4nte/mqtt-mirror/master/install.sh | sh
 ```
 
-
-**Compile from source** :hammer:
+**Compile from source**
 ```
-# Clone it outside GO path
 git clone https://github.com/4nte/mqtt-mirror
 cd mqtt-mirror
-
-# Get dependencies
-go get ./..
-
-
-# Build, duh.
-go build -o mqtt-mirror
-
-# Use it like there's no tomorrow
-./mqtt-mirror --version
+make compile
+./out/mqtt-mirror --version
 ```
+
+## Usage
+
+```
+mqtt-mirror <source> <target> [flags]
+```
+
+Broker URIs use the format `tcp://username:password@host:port`. Special characters in passwords are handled automatically.
+
+### Flags
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--topic-filter` | `-t` | `#` (all) | Comma-separated topic filters with MQTT wildcard support |
+| `--topic-prefix` | | | Prefix to prepend to all mirrored topic names |
+| `--topic-replace` | | | Topic replacement in `old:new` format (repeatable) |
+| `--name` | | random | Instance name for MQTT client ID (max 10 chars) |
+| `--clean-session` | | `true` | MQTT clean session flag |
+| `--health-port` | | `8080` | Port for health check HTTP server |
+| `--verbose` | `-v` | `false` | Verbose logging output |
+| `--config` | | | Path to TOML config file |
+
+### Topic rewriting
+
+Rewrite topic names before publishing to the target broker using `--topic-prefix` and `--topic-replace`.
+
+**Prefix** prepends a string to all topics:
+```
+mqtt-mirror source target --topic-prefix "mirror/"
+# devices/sensor1 → mirror/devices/sensor1
+```
+
+**Replace** performs string substitution (`old:new` format, repeatable):
+```
+mqtt-mirror source target --topic-replace "staging:production"
+# staging/events → production/events
+```
+
+Strip a string by leaving the replacement empty:
+```
+mqtt-mirror source target --topic-replace "legacy/:"
+# legacy/devices/sensor1 → devices/sensor1
+```
+
+When both are used, replacements are applied first, then the prefix.
+
+### Configuration file
+
+Instead of flags, you can use a TOML configuration file. Mqtt-mirror looks for `mirror.toml` in the current directory, or specify a path with `--config`.
+
+```toml
+source = "tcp://user:password@source-broker:1883"
+target = "tcp://user:password@target-broker:1883"
+
+topic_filter = ["devices/#", "sensors/+/temperature"]
+topic_prefix = "mirror/"
+topic_replace = ["staging:production", "v1:v2"]
+
+name = "my-mirror"
+verbose = true
+health_port = 9090
+clean_session = false
+```
+
+Environment variables are also supported via Viper (e.g., `SOURCE`, `TARGET`, `VERBOSE`).
+
+### Persistent sessions
+
+By default, mqtt-mirror uses clean sessions. Set `--clean-session=false` to use persistent sessions — the broker will remember subscriptions and queue messages while the client is disconnected.
+
+**Important:** Persistent sessions require a stable client ID. Always set `--name` when using `--clean-session=false`, otherwise a new random ID is generated on each restart, losing the session.
+
+## Health & metrics
+
+Mqtt-mirror exposes HTTP endpoints for health checks and monitoring on the health port (default `8080`).
+
+| Endpoint | Description |
+|----------|-------------|
+| `/healthz` | Liveness probe — always returns `200 OK` |
+| `/readyz` | Readiness probe — returns `200 OK` only when both source and target are connected, `503` otherwise |
+| `/metrics` | Prometheus metrics |
+
+### Prometheus metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `mqtt_mirror_messages_received_total` | Counter | Messages received from source (by QoS) |
+| `mqtt_mirror_messages_published_total` | Counter | Messages published to target (by QoS) |
+| `mqtt_mirror_publish_errors_total` | Counter | Publish failures (timeout or error) |
+| `mqtt_mirror_message_size_bytes` | Histogram | Payload size distribution |
+| `mqtt_mirror_publish_duration_seconds` | Histogram | Publish latency distribution |
+| `mqtt_mirror_source_connected` | Gauge | Source broker connection status (1/0) |
+| `mqtt_mirror_target_connected` | Gauge | Target broker connection status (1/0) |
+| `mqtt_mirror_build_info` | Gauge | Build metadata with version label |
+
+## Resilience
+
+- **Auto-reconnect** — Both source and target clients automatically reconnect on connection loss (15s max interval).
+- **Auto-resubscribe** — Subscriptions are re-established on reconnect.
+- **Graceful shutdown** — Cleanly disconnects from both brokers on SIGINT/SIGTERM.
 
 ## Sponsors
 ![spotsie](https://spotsie.io/images/spotsie.svg)
