@@ -96,9 +96,10 @@ Broker URIs use the format `tcp://username:password@host:port`. Special characte
 | `--topic-filter` | `-t` | `#` (all) | Comma-separated topic filters with MQTT wildcard support |
 | `--topic-prefix` | | | Prefix to prepend to all mirrored topic names |
 | `--topic-replace` | | | Topic replacement in `old:new` format (repeatable) |
-| `--name` | | random | Instance name for MQTT client ID (max 10 chars) |
+| `--name` | | random | Instance name for MQTT client ID (max 23 chars) |
 | `--clean-session` | | `true` | MQTT clean session flag |
 | `--health-port` | | `8080` | Port for health check HTTP server |
+| `--publish-timeout` | | `10s` | Timeout for publishing messages to the target broker |
 | `--verbose` | `-v` | `false` | Verbose logging output |
 | `--config` | | | Path to TOML config file |
 
@@ -144,7 +145,24 @@ health_port = 9090
 clean_session = false
 ```
 
-Environment variables are also supported via Viper (e.g., `SOURCE`, `TARGET`, `VERBOSE`).
+### Environment variables
+
+All configuration options can be set via environment variables (uppercase, underscores instead of hyphens):
+
+| Variable | Equivalent flag / config key |
+|----------|------------------------------|
+| `SOURCE` | `source` (positional arg) |
+| `TARGET` | `target` (positional arg) |
+| `TOPIC_FILTER` | `--topic-filter` |
+| `TOPIC_PREFIX` | `--topic-prefix` |
+| `TOPIC_REPLACE` | `--topic-replace` |
+| `NAME` | `--name` |
+| `VERBOSE` | `--verbose` |
+| `HEALTH_PORT` | `--health-port` |
+| `CLEAN_SESSION` | `--clean-session` |
+| `PUBLISH_TIMEOUT` | `--publish-timeout` |
+
+**Precedence order** (highest to lowest): CLI flag > environment variable > config file > default value.
 
 ### Persistent sessions
 
@@ -180,6 +198,12 @@ Mqtt-mirror exposes HTTP endpoints for health checks and monitoring on the healt
 - **Auto-reconnect** — Both source and target clients automatically reconnect on connection loss (15s max interval).
 - **Auto-resubscribe** — Subscriptions are re-established on reconnect.
 - **Graceful shutdown** — Cleanly disconnects from both brokers on SIGINT/SIGTERM.
+
+## Documentation
+
+- [Kubernetes & Helm deployment](docs/kubernetes.md) — Full Helm values reference, ConfigMap configuration, secrets, ServiceMonitor setup, and deployment best practices.
+- [Metrics & monitoring](docs/monitoring.md) — Detailed metric descriptions, PromQL queries, alerting rules, and Grafana tips.
+- [Troubleshooting](docs/troubleshooting.md) — Common failure modes, diagnostic steps, and connection lifecycle details.
 
 ## Sponsors
 ![spotsie](https://spotsie.io/images/spotsie.svg)
