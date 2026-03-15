@@ -30,6 +30,7 @@ helm install mqtt-mirror 4nte/mqtt-mirror \
 | `mqtt.topic_prefix` | `""` | Prefix to prepend to mirrored topics |
 | `mqtt.topic_replace` | `[]` | Topic replacements in `old:new` format |
 | `mqtt.publish_timeout` | `""` | Timeout for publishing messages (e.g. `"10s"`) |
+| `mqtt.subscribe_qos` | `0` | QoS for source broker subscription (0, 1, or 2) |
 | `mqtt.clean_session` | `true` | MQTT clean session flag |
 | `mqtt.existingSecret` | (commented out) | Name of an existing Secret with `SOURCE` and `TARGET` keys |
 

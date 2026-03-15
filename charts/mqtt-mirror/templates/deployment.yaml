@@ -85,6 +85,10 @@ spec:
             - name: PUBLISH_TIMEOUT
               value: "{{ .Values.mqtt.publish_timeout }}"
             {{- end }}
+            {{- if .Values.mqtt.subscribe_qos }}
+            - name: SUBSCRIBE_QOS
+              value: {{ .Values.mqtt.subscribe_qos | quote }}
+            {{- end }}
             - name: HEALTH_PORT
               value: "{{ .Values.health.port }}"
             {{- with .Values.extraEnvVars }}

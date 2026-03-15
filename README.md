@@ -100,6 +100,7 @@ Broker URIs use the format `tcp://username:password@host:port`. Special characte
 | `--clean-session` | | `true` | MQTT clean session flag |
 | `--health-port` | | `8080` | Port for health check HTTP server |
 | `--publish-timeout` | | `10s` | Timeout for publishing messages to the target broker |
+| `--subscribe-qos` | | `0` | QoS level for source broker subscription (0, 1, or 2) |
 | `--verbose` | `-v` | `false` | Verbose logging output |
 | `--config` | | | Path to TOML config file |
 
@@ -161,6 +162,7 @@ All configuration options can be set via environment variables (uppercase, under
 | `HEALTH_PORT` | `--health-port` |
 | `CLEAN_SESSION` | `--clean-session` |
 | `PUBLISH_TIMEOUT` | `--publish-timeout` |
+| `SUBSCRIBE_QOS` | `--subscribe-qos` |
 
 **Precedence order** (highest to lowest): CLI flag > environment variable > config file > default value.
 
