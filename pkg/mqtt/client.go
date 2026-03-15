@@ -15,7 +15,7 @@ func NewClient(
 	isSource bool,
 	clientName string,
 	cleanSession bool,
-	onConnctHandler func(paho.Client),
+	onConnectHandler func(paho.Client),
 	onConnectionLostHandler func(paho.Client, error),
 ) (paho.Client, error) {
 	var role string
@@ -25,8 +25,8 @@ func NewClient(
 		role = "target"
 	}
 
-	if len(clientName) > 10 {
-		return nil, fmt.Errorf("client name can have maximum of 10 characters")
+	if len(clientName) > 23 {
+		return nil, fmt.Errorf("client name can have maximum of 23 characters")
 	}
 	id := fmt.Sprintf("mqtt-mirror-%s", clientName)
 
@@ -42,7 +42,7 @@ func NewClient(
 	clientOpts.SetOnConnectHandler(func(client paho.Client) {
 		zap.L().
 			Info("connection established", zap.String("broker_uri", broker), zap.String("role", role))
-		onConnctHandler(client)
+		onConnectHandler(client)
 	})
 	clientOpts.SetConnectionLostHandler(func(client paho.Client, err error) {
 		zap.L().Warn("connection lost", zap.String("broker_uri", broker), zap.String("role", role))

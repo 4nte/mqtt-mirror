@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 
@@ -45,7 +46,8 @@ func (h *HealthServer) IsReady() bool {
 
 // Start begins serving health check endpoints on the given port.
 // If reg is non-nil, a /metrics endpoint is registered for Prometheus scraping.
-func (h *HealthServer) Start(port int, reg *prometheus.Registry) {
+// Returns an error if the port cannot be bound.
+func (h *HealthServer) Start(port int, reg *prometheus.Registry) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -65,17 +67,23 @@ func (h *HealthServer) Start(port int, reg *prometheus.Registry) {
 		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	}
 
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return fmt.Errorf("health server listen on port %d: %w", port, err)
+	}
+
 	h.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 
 	go func() {
 		zap.L().Info("health server starting", zap.Int("port", port))
-		if err := h.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := h.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 			zap.L().Error("health server error", zap.Error(err))
 		}
 	}()
+
+	return nil
 }
 
 // Shutdown gracefully stops the health server.

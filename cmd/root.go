@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -9,8 +10,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"errors"
 
 	"github.com/4nte/mqtt-mirror/internal"
 	"github.com/dchest/uniuri"
@@ -177,7 +176,9 @@ var rootCmd = &cobra.Command{
 
 		healthPort := viper.GetInt("health_port")
 		health := internal.NewHealthServer()
-		health.Start(healthPort, reg)
+		if err := health.Start(healthPort, reg); err != nil {
+			return fmt.Errorf("failed to start health server: %w", err)
+		}
 
 		cleanSession := viper.GetBool("clean_session")
 		if !cleanSession && len(viper.GetString("name")) == 0 {
@@ -196,7 +197,8 @@ var rootCmd = &cobra.Command{
 			rewriteConfig.Replacements = append(rewriteConfig.Replacements, r)
 		}
 
-		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig)
+		publishTimeout := viper.GetDuration("publish_timeout")
+		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig, publishTimeout)
 		if err != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -227,6 +229,7 @@ func init() {
 
 	rootCmd.PersistentFlags().String("topic-prefix", "", "prefix to prepend to all mirrored topics")
 	rootCmd.PersistentFlags().StringSlice("topic-replace", []string{}, "topic replacement in old:new format (repeatable)")
+	rootCmd.PersistentFlags().Duration("publish-timeout", 10*time.Second, "timeout for publishing messages to the target broker")
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
 
@@ -257,6 +260,9 @@ func init() {
 		panic(err)
 	}
 	if err = viper.BindPFlag("topic_replace", rootCmd.PersistentFlags().Lookup("topic-replace")); err != nil {
+		panic(err)
+	}
+	if err = viper.BindPFlag("publish_timeout", rootCmd.PersistentFlags().Lookup("publish-timeout")); err != nil {
 		panic(err)
 	}
 }

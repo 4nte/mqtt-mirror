@@ -11,7 +11,7 @@ import (
 	"github.com/4nte/mqtt-mirror/pkg/mqtt"
 )
 
-func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics *Metrics, rewrite TopicRewriteConfig) mqtt2.MessageHandler {
+func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics *Metrics, rewrite TopicRewriteConfig, publishTimeout time.Duration) mqtt2.MessageHandler {
 	return func(client mqtt2.Client, message mqtt2.Message) {
 		topic := message.Topic()
 		payload := message.Payload()
@@ -41,7 +41,7 @@ func createSourceMessageHandler(targetClient mqtt2.Client, verbose bool, metrics
 
 		start := time.Now()
 		token := targetClient.Publish(publishTopic, qos, retained, payload)
-		ok := token.WaitTimeout(10 * time.Second)
+		ok := token.WaitTimeout(publishTimeout)
 		elapsed := time.Since(start).Seconds()
 
 		if metrics != nil {
@@ -87,8 +87,18 @@ func Mirror(
 	health *HealthServer,
 	metrics *Metrics,
 	rewrite TopicRewriteConfig,
+	publishTimeout time.Duration,
 ) (func(), error) {
-	logger, _ := zap.NewDevelopment()
+	if publishTimeout <= 0 {
+		publishTimeout = 10 * time.Second
+	}
+
+	var logger *zap.Logger
+	if verbose {
+		logger, _ = zap.NewDevelopment()
+	} else {
+		logger, _ = zap.NewProduction()
+	}
 	zap.ReplaceGlobals(logger)
 	defer func() { _ = logger.Sync() }() // flushes buf
 
@@ -140,7 +150,7 @@ func Mirror(
 	}
 
 	qos := byte(0)
-	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics, rewrite)
+	messageHandler := createSourceMessageHandler(targetClient, verbose, metrics, rewrite, publishTimeout)
 	onConnHandler := func(client mqtt2.Client) {
 		if len(topics) == 0 {
 			// Subscribe to all
@@ -188,6 +198,7 @@ func Mirror(
 		},
 	)
 	if err != nil {
+		targetClient.Disconnect(250)
 		return func() {}, err
 	}
 

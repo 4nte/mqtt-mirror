@@ -1,6 +1,6 @@
 apiVersion: v2
 type: application
-appVersion: "0.2.0"
+appVersion: "0.3.2"
 description: Mqtt mirror helm chart
 name: mqtt-mirror
 version: 0.1.4
