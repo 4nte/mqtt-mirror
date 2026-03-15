@@ -3,6 +3,7 @@ APP_EXECUTABLE="./out/$(APP)"
 
 setup:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	git config core.hooksPath .githooks
 
 compile:
 	mkdir -p out
