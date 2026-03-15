@@ -102,9 +102,6 @@ var rootCmd = &cobra.Command{
 		if len(args) == 2 {
 			source = args[0]
 			target = args[1]
-			if len(args) < 2 {
-				return errors.New("target and source not specified")
-			}
 		} else {
 			source = viper.GetString("source")
 			target = viper.GetString("target")
@@ -135,6 +132,12 @@ var rootCmd = &cobra.Command{
 			fmt.Println()
 			fmt.Println(sig)
 			done <- true
+
+			// Second signal forces immediate exit
+			sig = <-sigs
+			fmt.Println()
+			fmt.Printf("%s (force quit)\n", sig)
+			os.Exit(1)
 		}()
 
 		// Use args or viper value
@@ -195,6 +198,9 @@ var rootCmd = &cobra.Command{
 
 		terminate, err := internal.Mirror(*sourceURL, *targetURL, topicFilter, isVerbose, 0, instanceName, cleanSession, health, metrics, rewriteConfig)
 		if err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = health.Shutdown(ctx)
 			return fmt.Errorf("mirror failed: %w", err)
 		}
 
@@ -222,7 +228,7 @@ func init() {
 	rootCmd.PersistentFlags().String("topic-prefix", "", "prefix to prepend to all mirrored topics")
 	rootCmd.PersistentFlags().StringSlice("topic-replace", []string{}, "topic replacement in old:new format (repeatable)")
 
-	rootCmd.PersistentFlags().StringVar(&targetURI, "config", "", "config file")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
 
 	err := viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
 	if err != nil {

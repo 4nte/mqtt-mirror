@@ -57,6 +57,7 @@ func NewClient(
 	connTimeout := 15 * time.Second
 	ok := token.WaitTimeout(connTimeout)
 	if !ok {
+		client.Disconnect(0)
 		err := fmt.Errorf(
 			"connection timeout exceeded (%s): %s (%s)",
 			connTimeout.String(),
@@ -64,6 +65,10 @@ func NewClient(
 			role,
 		)
 		return nil, err
+	}
+	if err := token.Error(); err != nil {
+		client.Disconnect(0)
+		return nil, fmt.Errorf("connection failed: %s (%s): %w", broker, role, err)
 	}
 
 	return client, nil

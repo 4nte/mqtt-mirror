@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseBrokerURI(t *testing.T) {
@@ -208,6 +213,39 @@ func TestParseBrokerURI_EdgeCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testdataPath(name string) string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "testdata", name)
+}
+
+func TestConfigFile_LoadsAllKeys(t *testing.T) {
+	v := viper.New()
+	v.SetConfigFile(testdataPath("mirror.toml"))
+	require.NoError(t, v.ReadInConfig())
+
+	require.Equal(t, "tcp://testuser:testpass@src-host:1883", v.GetString("source"))
+	require.Equal(t, "tcp://testuser:testpass@dst-host:1883", v.GetString("target"))
+	require.Equal(t, true, v.GetBool("verbose"))
+	require.Equal(t, []string{"test/#", "foo/bar"}, v.GetStringSlice("topic_filter"))
+	require.Equal(t, "test-mirror", v.GetString("name"))
+	require.Equal(t, 9999, v.GetInt("health_port"))
+	require.Equal(t, false, v.GetBool("clean_session"))
+	require.Equal(t, "prefix/", v.GetString("topic_prefix"))
+	require.Equal(t, []string{"old:new", "alpha:beta"}, v.GetStringSlice("topic_replace"))
+}
+
+func TestConfigFlag_SetsConfigFile(t *testing.T) {
+	oldCfg := cfgFile
+	defer func() { cfgFile = oldCfg }()
+
+	cfgFile = ""
+
+	err := rootCmd.PersistentFlags().Set("config", "/tmp/test.toml")
+	require.NoError(t, err)
+
+	require.Equal(t, "/tmp/test.toml", cfgFile)
 }
 
 func TestIsValidUrl(t *testing.T) {

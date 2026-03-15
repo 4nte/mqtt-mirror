@@ -105,13 +105,21 @@ func Mirror(
 		Info("mirroring traffic", zap.String("source_host", source.Host), zap.String("target_host", target.Host))
 
 	sourceHost := getBrokerHostString(source)
-	sourcePassword, _ := source.User.Password()
+	var sourceUsername, sourcePassword string
+	if source.User != nil {
+		sourceUsername = source.User.Username()
+		sourcePassword, _ = source.User.Password()
+	}
 
 	targetHost := getBrokerHostString(target)
-	targetPassword, _ := target.User.Password()
+	var targetUsername, targetPassword string
+	if target.User != nil {
+		targetUsername = target.User.Username()
+		targetPassword, _ = target.User.Password()
+	}
 	targetClient, err := mqtt.NewClient(
 		targetHost,
-		target.User.Username(),
+		targetUsername,
 		targetPassword,
 		false,
 		instanceName,
@@ -162,7 +170,7 @@ func Mirror(
 
 	sourceClient, err := mqtt.NewClient(
 		sourceHost,
-		source.User.Username(),
+		sourceUsername,
 		sourcePassword,
 		true,
 		instanceName,
@@ -188,8 +196,8 @@ func Mirror(
 	}
 
 	terminate := func() {
-		sourceClient.Disconnect(0)
-		targetClient.Disconnect(0)
+		sourceClient.Disconnect(250)
+		targetClient.Disconnect(250)
 	}
 	go func() {
 		<-done
