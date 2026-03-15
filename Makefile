@@ -18,7 +18,7 @@ vet:
 	go vet ./...
 
 test:
-	go test ./... -covermode=count -coverprofile=profile.cov
+	go test -race ./... -covermode=atomic -coverprofile=profile.cov
 
 test-e2e:
 	go test -tags=e2e ./e2e/ -v -timeout 10m -count=1
