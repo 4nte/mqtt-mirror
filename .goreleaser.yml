@@ -1,12 +1,8 @@
 version: 2
 
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-  # you may remove this if you don't use vgo
   - go mod tidy
-  # you may remove this if you don't need go generate
   - go generate ./...
 builds:
 - env:
@@ -24,38 +20,19 @@ changelog:
     - '^docs:'
     - '^test:'
 
-
 dockers:
-# You can have multiple Docker images.
-- # GOOS of the built binary that should be used.
-  goos: linux
-
-  # GOARCH of the built binary that should be used.
+# Docker Hub - amd64
+- goos: linux
   goarch: amd64
-
-  # GOARM of the built binary that should be used.
-  goarm: ''
-
   ids:
   - mqtt-mirror
-
-  # Templates of the Docker image names.
   image_templates:
-  - "antegulin/mqtt-mirror:latest"
-  - "antegulin/mqtt-mirror:{{ .Tag }}"
-  - "antegulin/mqtt-mirror:{{ .Version }}"
-  - "antegulin/mqtt-mirror:v{{ .Major }}"
-
-  # Skips the docker push. Could be useful if you also do draft releases.
-  # If set to auto, the release will not be pushed to the docker repository
-  # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
-  # Defaults to false.
+  - "antegulin/mqtt-mirror:latest-amd64"
+  - "antegulin/mqtt-mirror:{{ .Tag }}-amd64"
+  - "antegulin/mqtt-mirror:{{ .Version }}-amd64"
+  - "antegulin/mqtt-mirror:v{{ .Major }}-amd64"
   skip_push: false
-
-  # Path to the Dockerfile (from the project root).
   dockerfile: Dockerfile
-
-  # Template of the docker build flags.
   build_flag_templates:
   - "--pull"
   - "--label=org.opencontainers.image.created={{.Date}}"
@@ -63,15 +40,35 @@ dockers:
   - "--label=org.opencontainers.image.revision={{.FullCommit}}"
   - "--label=org.opencontainers.image.version={{.Version}}"
 
+# Docker Hub - arm64
+- goos: linux
+  goarch: arm64
+  ids:
+  - mqtt-mirror
+  image_templates:
+  - "antegulin/mqtt-mirror:latest-arm64"
+  - "antegulin/mqtt-mirror:{{ .Tag }}-arm64"
+  - "antegulin/mqtt-mirror:{{ .Version }}-arm64"
+  - "antegulin/mqtt-mirror:v{{ .Major }}-arm64"
+  skip_push: false
+  dockerfile: Dockerfile
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+
+# GHCR - amd64
 - goos: linux
   goarch: amd64
   ids:
   - mqtt-mirror
   image_templates:
-  - "ghcr.io/4nte/mqtt-mirror:latest"
-  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}"
-  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}"
-  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}"
+  - "ghcr.io/4nte/mqtt-mirror:latest-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}-amd64"
   dockerfile: Dockerfile
   build_flag_templates:
   - "--pull"
@@ -81,22 +78,67 @@ dockers:
   - "--label=org.opencontainers.image.version={{.Version}}"
   - "--label=org.opencontainers.image.source=https://github.com/4nte/mqtt-mirror"
 
+# GHCR - arm64
+- goos: linux
+  goarch: arm64
+  ids:
+  - mqtt-mirror
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:latest-arm64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}-arm64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}-arm64"
+  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}-arm64"
+  dockerfile: Dockerfile
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source=https://github.com/4nte/mqtt-mirror"
+
+docker_manifests:
+# Docker Hub
+- name_template: "antegulin/mqtt-mirror:{{ .Version }}"
+  image_templates:
+  - "antegulin/mqtt-mirror:{{ .Version }}-amd64"
+  - "antegulin/mqtt-mirror:{{ .Version }}-arm64"
+- name_template: "antegulin/mqtt-mirror:{{ .Tag }}"
+  image_templates:
+  - "antegulin/mqtt-mirror:{{ .Tag }}-amd64"
+  - "antegulin/mqtt-mirror:{{ .Tag }}-arm64"
+- name_template: "antegulin/mqtt-mirror:latest"
+  image_templates:
+  - "antegulin/mqtt-mirror:latest-amd64"
+  - "antegulin/mqtt-mirror:latest-arm64"
+- name_template: "antegulin/mqtt-mirror:v{{ .Major }}"
+  image_templates:
+  - "antegulin/mqtt-mirror:v{{ .Major }}-amd64"
+  - "antegulin/mqtt-mirror:v{{ .Major }}-arm64"
+# GHCR
+- name_template: "ghcr.io/4nte/mqtt-mirror:{{ .Version }}"
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Version }}-arm64"
+- name_template: "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}"
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:{{ .Tag }}-arm64"
+- name_template: "ghcr.io/4nte/mqtt-mirror:latest"
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:latest-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:latest-arm64"
+- name_template: "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}"
+  image_templates:
+  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}-amd64"
+  - "ghcr.io/4nte/mqtt-mirror:v{{ .Major }}-arm64"
+
 brews:
-- # Github repository to push the tap to.
-  repository:
+- repository:
     owner: 4nte
     name: homebrew-tap
-
-  # Git author used to commit to the repository.
-  # Defaults are shown.
   commit_author:
     name: goreleaserbot
     email: gnante0@gmail.com
-
-  # Your app's homepage.
-  # Default is empty.
   homepage: "https://github.com/4nte/mqtt-mirror"
-
-  # Your app's description.
-  # Default is empty.
   description: "Replicate MQTT traffic from one broker to another."

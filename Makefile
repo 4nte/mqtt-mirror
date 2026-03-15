@@ -22,9 +22,3 @@ test:
 
 test-e2e:
 	go test -tags=e2e ./e2e/ -v -timeout 10m -count=1
-
-docker-image:
-	docker build -t ${USER}/mqtt-mirror:latest -f build/Dockerfile .
-
-docker-image-tag:
-	docker build -t antegulin/mqtt-mirror:$DRONE_TAG -f build/Dockerfile .
