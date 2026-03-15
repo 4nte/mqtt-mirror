@@ -81,6 +81,10 @@ spec:
             - name: TOPIC_REPLACE
               value: "{{ include "mqtt-mirror.joinListWithComma" .Values.mqtt.topic_replace }}"
             {{- end }}
+            {{- if .Values.mqtt.publish_timeout }}
+            - name: PUBLISH_TIMEOUT
+              value: "{{ .Values.mqtt.publish_timeout }}"
+            {{- end }}
             - name: HEALTH_PORT
               value: "{{ .Values.health.port }}"
             {{- with .Values.extraEnvVars }}

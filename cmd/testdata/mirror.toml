@@ -1,0 +1,10 @@
+source = "tcp://testuser:testpass@src-host:1883"
+target = "tcp://testuser:testpass@dst-host:1883"
+verbose = true
+topic_filter = ["test/#", "foo/bar"]
+name = "test-mirror"
+health_port = 9999
+clean_session = false
+topic_prefix = "prefix/"
+topic_replace = ["old:new", "alpha:beta"]
+publish_timeout = "10s"

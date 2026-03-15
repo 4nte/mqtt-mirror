@@ -234,6 +234,7 @@ func TestConfigFile_LoadsAllKeys(t *testing.T) {
 	require.Equal(t, false, v.GetBool("clean_session"))
 	require.Equal(t, "prefix/", v.GetString("topic_prefix"))
 	require.Equal(t, []string{"old:new", "alpha:beta"}, v.GetStringSlice("topic_replace"))
+	require.Equal(t, "10s", v.GetString("publish_timeout"))
 }
 
 func TestConfigFlag_SetsConfigFile(t *testing.T) {

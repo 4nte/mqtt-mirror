@@ -1,0 +1,33 @@
+# mqtt-mirror configuration file
+# Copy this file to mirror.toml and adjust values as needed.
+
+# Source MQTT broker URI (required)
+source = "tcp://user:password@source-broker:1883"
+
+# Target MQTT broker URI (required)
+target = "tcp://user:password@target-broker:1883"
+
+# Enable verbose logging
+verbose = true
+
+# MQTT topic filters to subscribe to (list of strings)
+topic_filter = ["devices/#", "sensors/+/temperature"]
+
+# Instance name for the MQTT client ID (randomly generated if not set)
+name = "my-mirror"
+
+# Port for the health check HTTP server
+health_port = 9090
+
+# MQTT clean session flag (set to false for persistent sessions)
+# WARNING: clean_session=false requires a stable "name" to avoid session loss
+clean_session = false
+
+# Prefix to prepend to all mirrored topic names
+topic_prefix = "mirror/"
+
+# Topic replacements in old:new format
+topic_replace = ["staging:production", "v1:v2"]
+
+# Timeout for publishing messages to the target broker
+publish_timeout = "10s"

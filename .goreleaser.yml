@@ -39,6 +39,7 @@ dockers:
   - "--label=org.opencontainers.image.name={{.ProjectName}}"
   - "--label=org.opencontainers.image.revision={{.FullCommit}}"
   - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source=https://github.com/4nte/mqtt-mirror"
 
 # Docker Hub - arm64
 - goos: linux
@@ -58,6 +59,7 @@ dockers:
   - "--label=org.opencontainers.image.name={{.ProjectName}}"
   - "--label=org.opencontainers.image.revision={{.FullCommit}}"
   - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source=https://github.com/4nte/mqtt-mirror"
 
 # GHCR - amd64
 - goos: linux

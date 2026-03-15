@@ -1,12 +1,14 @@
 package internal
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockClient implements paho.Client for testing. We only need IsConnected().
@@ -21,18 +23,15 @@ func (m *mockClient) IsConnected() bool {
 
 func TestHealthz_ReturnsOK(t *testing.T) {
 	h := NewHealthServer()
+	require.NoError(t, h.Start(0, nil))
+	defer h.Shutdown(context.Background())
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	mux.ServeHTTP(w, req)
+	h.server.Handler.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	_ = h // ensure server was created
 }
 
 func TestReadyz_NoClients_Returns503(t *testing.T) {

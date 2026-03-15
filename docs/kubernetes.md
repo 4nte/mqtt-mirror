@@ -29,6 +29,7 @@ helm install mqtt-mirror 4nte/mqtt-mirror \
 | `mqtt.topic_filter` | `[]` (all topics) | List of topic filters |
 | `mqtt.topic_prefix` | `""` | Prefix to prepend to mirrored topics |
 | `mqtt.topic_replace` | `[]` | Topic replacements in `old:new` format |
+| `mqtt.publish_timeout` | `""` | Timeout for publishing messages (e.g. `"10s"`) |
 | `mqtt.clean_session` | `true` | MQTT clean session flag |
 | `mqtt.existingSecret` | (commented out) | Name of an existing Secret with `SOURCE` and `TARGET` keys |
 
@@ -94,6 +95,7 @@ configFile: |
   clean_session = false
   topic_prefix = "mirror/"
   topic_replace = ["staging:production", "v1:v2"]
+  publish_timeout = "10s"
 ```
 
 When `configFile` is set, the chart:

@@ -218,7 +218,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringSliceVarP(&Topics, "topic_filter", "t", []string{}, "comma separated topic filters. Example: foo,bar_*_health,device#")
+	rootCmd.PersistentFlags().StringSliceVarP(&Topics, "topic-filter", "t", []string{}, "comma separated topic filters. Example: foo,bar_*_health,device#")
 
 	rootCmd.PersistentFlags().StringVar(&sourceURI, "source", "", "mqtt source URI")
 	rootCmd.PersistentFlags().StringVar(&targetURI, "target", "", "mqtt target URI")
@@ -241,7 +241,7 @@ func init() {
 	if err = viper.BindPFlag("target", rootCmd.PersistentFlags().Lookup("target")); err != nil {
 		panic(err)
 	}
-	if err = viper.BindPFlag("topic_filter", rootCmd.PersistentFlags().Lookup("topic_filter")); err != nil {
+	if err = viper.BindPFlag("topic_filter", rootCmd.PersistentFlags().Lookup("topic-filter")); err != nil {
 		panic(err)
 	}
 	if err = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")); err != nil {

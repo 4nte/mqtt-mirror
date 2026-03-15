@@ -21,6 +21,7 @@ mqtt:
   clean_session: true # set to false for persistent sessions
   topic_prefix: "" # prefix to prepend to all mirrored topics
   topic_replace: [] # topic replacements in old:new format
+  publish_timeout: "" # timeout for publishing messages (e.g. "10s")
   # Use an existing secret containing SOURCE and TARGET keys
   # existingSecret: ""
 
@@ -62,6 +63,7 @@ extraEnvVars: []
 #   clean_session = false
 #   topic_prefix = "mirror/"
 #   topic_replace = ["staging:production", "v1:v2"]
+#   publish_timeout = "10s"
 
 serviceMonitor:
   enabled: false
