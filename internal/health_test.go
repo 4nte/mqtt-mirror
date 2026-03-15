@@ -24,7 +24,7 @@ func (m *mockClient) IsConnected() bool {
 func TestHealthz_ReturnsOK(t *testing.T) {
 	h := NewHealthServer()
 	require.NoError(t, h.Start(0, nil))
-	defer h.Shutdown(context.Background())
+	defer func() { _ = h.Shutdown(context.Background()) }()
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
