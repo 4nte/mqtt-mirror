@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/dchest/uniuri v1.2.0
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.8.1
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/cobra v1.10.2
